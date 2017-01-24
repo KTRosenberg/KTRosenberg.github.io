@@ -60,7 +60,7 @@ a {
     display: inline-block;
     width: 19.5%;
     margin-right: 0.625%;
-    text-align: center;
+    text-align: left;
     line-height: 3;
     color: black;
 }
@@ -70,15 +70,15 @@ li:last-child a {
 }
 
 a:link, a:visited, a:focus {
-    background: white;
+    background: "#CCCCFF";
 }
 
 a:hover {
-    background:  "#CCCCFF";
+    background: indigo;
 }
 
 a:active {
-    background: indigo;
+    background: navy;
     color: white;
 }
 
