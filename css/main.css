@@ -45,16 +45,16 @@ body,html {
     font-family: cambria;
 }
 
-ul_button {
+ul {
     padding: 0;
     width 100%;
 }
 
-li_button {
+li {
     display: inline;
 }
 
-a_button {
+a {
     outline: none;
     text-decoration: none;
     display: inline-block;
@@ -65,19 +65,19 @@ a_button {
     color: black;
 }
 
-li_button:last-child a_button {
+li:last-child a {
     margin-right: 0;
 }
 
-a_button:link, a_button:visited, a_button:focus {
+a:link, a:visited, a:focus {
     background: white;
 }
 
-a_button:hover {
+a:hover {
     background:  "#CCCCFF";
 }
 
-a_button:active {
+a:active {
     background: indigo;
     color: white;
 }
