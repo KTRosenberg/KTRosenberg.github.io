@@ -1,3 +1,29 @@
+.indigo{
+    color: indigo;
+}
+.blue{
+    color: blue;
+}
+.black{
+    color: black;
+}
+
+.default{
+    font-size:14px;
+}
+.large{
+    font-size::24px;
+}
+.small{
+    font-size::11px;
+}
+
+.default_font{
+    font-family:cambria;
+}
+
+
+
 /*
 body {
     margin: 60px auto;
