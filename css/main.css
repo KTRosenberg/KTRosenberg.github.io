@@ -40,6 +40,48 @@ h4 {
     font-family: cambria;
 }
 
+body,html {
+    margin: 0;
+    font-family: cambria;
+}
+
+ul_button {
+    padding: 0;
+    width 100%;
+}
+
+li_button {
+    display: inline;
+}
+
+a_button {
+    outline: none;
+    text-decoration: none;
+    display: inline-block;
+    width: 19.5%;
+    margin-right: 0.625%;
+    text-align: center;
+    line-height: 3;
+    color: black;
+}
+
+li_button:last-child a_button {
+    margin-right: 0;
+}
+
+a_button:link, a_button:visited, a_button:focus {
+    background: white;
+}
+
+a_button:hover {
+    background:  "#CCCCFF";
+}
+
+a_button:active {
+    background: indigo;
+    color: white;
+}
+
 
 
 /*
