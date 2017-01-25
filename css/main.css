@@ -70,14 +70,17 @@ li:last-child a {
 }
 
 a:link, a:visited, a:focus {
+    background: yellow;
     color: indigo;
 }
 
 a:hover {
+    background: orange:
     color: indigo;
 }
 
 a:active {
+    background: red;
     color: black;
 }
 
