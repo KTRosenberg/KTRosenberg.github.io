@@ -60,8 +60,8 @@ a.hover {
     color: black;
 }
 
-body,html {
-    margin: 8px;
+body, html {
+    margin: 0;
     font-family: cambria;
 }
 
