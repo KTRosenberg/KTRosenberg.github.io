@@ -54,6 +54,7 @@ li {
     display: inline;
 }
 
+/*
 a {
     outline: none;
     text-decoration: none;
@@ -68,6 +69,8 @@ a {
 li:last-child a {
     margin-right: 0;
 }
+*/
+/*
 
 a:link, a:visited, a:focus {
     background: yellow;
@@ -83,6 +86,8 @@ a:active {
     background: red;
     color: black;
 }
+
+*/
 
 
 
