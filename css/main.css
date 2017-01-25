@@ -42,13 +42,17 @@ h4 {
 }
 
 a.important_link {
-    color: blue;
+    color: navy;
     font-size: 11;
     font-family: cambria;
 }
 
 a.visited {
-    color: blue;
+    color: lavender;
+}
+
+a.hover {
+    color: navy
 }
 
 body,html {
