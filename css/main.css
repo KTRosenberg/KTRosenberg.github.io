@@ -46,7 +46,7 @@ body,html {
 }
 
 ul {
-    padding: 0;
+    padding: 8px;
     width 100%;
 }
 
@@ -70,16 +70,17 @@ li:last-child a {
 }
 
 a:link, a:visited, a:focus {
-    background: "#CCCCFF";
+    color: indigo;
 }
 
 a:hover {
-    background: indigo;
+    color: indigo;
+    font-weight: bold;
 }
 
 a:active {
-    background: navy;
-    color: white;
+    color: indigo;
+    font-weight: bold;
 }
 
 
