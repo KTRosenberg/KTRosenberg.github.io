@@ -41,7 +41,7 @@ h4 {
     font-family: cambria;
 }
 
-important_link {
+a.important_link {
     color: blue;
     font-size: 11;
     font-family: cambria;
