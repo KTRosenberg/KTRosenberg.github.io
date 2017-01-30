@@ -20,6 +20,8 @@
 
 <script id='fs_script' type='x-shader/x-fragment'>
 
+
+
 varying vec3 vPos;                               // Pixel position
 uniform float uTime;                             // Time
 vec2 A[3];
@@ -31,16 +33,15 @@ return floor(part_1+.5);
 }
 
 float D(vec2 p) {          // Unit sphere: return z value.
-   float rr = dot(p, p);
 
 
   if (true)
   {
 
-   return sin(p.x) + sin(uTime*p.y + cos(p.x)*.01);
+   return sin(p.x) + sin(uTime*p.y + cos(uTime)*.01);
   }
 
-   return sin(p.x) + sin(uTime*p.y*p.x + cos(p.x)*.01);
+   // return sin(p.x) + sin(uTime*p.y*p.x + cos(p.x)*.01);
 }
 
 float xwee;
@@ -86,6 +87,8 @@ void main() {
 
    gl_FragColor = vec4(sqrt(c), 1.);             // Final pixel color
 }
+
+
 
 </script>
    
