@@ -55,13 +55,15 @@ void main() {
 class example
 ---------------------------------------------------------------------
 
+
+
 varying vec3 vPos;                               // Position in image
 uniform float uTime;                             // Time
 vec3 LDir = normalize(vec3(1.,-sin(uTime),.5));  // Light direction
 vec3 LDir2 = normalize(vec3(-cos(uTime),0.,.5));  // Light direction
 vec3 LDir3 = normalize(vec3(1., sin(uTime), sin(uTime)));  // Light direction
 
-#define HOW_MANY (2)
+#define HOW_MANY (3)
 
 #define BRIGHT_1 true
 #define BRIGHT_2 true
@@ -110,7 +112,7 @@ void main() {
    arr[0].S = vec4(cos(uTime), sin(uTime),-5.,.5); // Animate sphere
    arr[0].t = raytraceSphere(arr[0]);              // Ray trace sphere
 
-   #if (HOW_MANY == 2)
+   #if (HOW_MANY > 1)
    sphere second;
    arr[1] = second;
    arr[1].V = vec3(0.,0.,0.);                          // Ray origin
@@ -119,7 +121,7 @@ void main() {
    arr[1].t = raytraceSphere(arr[1]);                  // Ray trace sphere
    #endif
 
-   #if (HOW_MANY == 3)
+   #if (HOW_MANY > 2)
    sphere third;
    arr[2] = third;
    arr[2].V = vec3(0.,0.,9.);                        // Ray origin
@@ -142,6 +144,7 @@ void main() {
 
    gl_FragColor = vec4(sqrt(c), 1.);             // Final pixel color
 }
+
 ---------------------------------------------------------------------
 Assignment 2 Start
 
