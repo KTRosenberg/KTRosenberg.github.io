@@ -17,6 +17,8 @@
 
 <script id='fss_script' type='x-shader/x-fragment'>
 
+<!--
+
 ---------------------------------------------------------------------
 varying vec3 vPos;                               // Position in image
 uniform float uTime;                             // Time
@@ -200,6 +202,8 @@ Define a light direction and compute diffuse shading.
 ---------------------------------------------------------------------
   x               x
 ---------------------------------------------------------------------
+-->
+
 varying vec3 vPos;                               // Position in image
 uniform float uTime;                             // Time
 vec3 LDir = normalize(vec3(1.,-sin(uTime),.5));  // Light direction
