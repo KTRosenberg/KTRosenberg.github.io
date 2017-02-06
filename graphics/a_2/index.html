@@ -55,6 +55,8 @@ void main() {
 class example
 ---------------------------------------------------------------------
 
+
+
 varying vec3 vPos;                               // Position in image
 uniform float uTime;                             // Time
 vec3 LDir = normalize(vec3(1.,-sin(uTime),.5));  // Light direction
@@ -113,11 +115,11 @@ void main() {
    vec3 c = vec3(.1*sin(vPos.y+uTime),.01,.04) + 0.005*vPos.x;                    // Dark background
 
    sphere first;
-   arr[0] = first;
-   arr[0].V = vec3(0.,0.,0.);                      // Ray origin
-   arr[0].W = normalize(vec3(vPos.xy, -3.));       // Ray direction
-   arr[0].S = vec4(cos(uTime), sin(uTime),-5.,.5); // Animate sphere
-   arr[0].t = raytraceSphere(arr[0]);              // Ray trace sphere
+   arr[2] = first;
+   arr[2].V = vec3(0.,0.,0.);                      // Ray origin
+   arr[2].W = normalize(vec3(vPos.xy, -3.));       // Ray direction
+   arr[2].S = vec4(cos(uTime), sin(uTime),-5.,.5); // Animate sphere
+   arr[2].t = raytraceSphere(arr[2]);              // Ray trace sphere
 
    #if (HOW_MANY > 1)
    sphere second;
@@ -130,12 +132,13 @@ void main() {
 
    #if (HOW_MANY > 2)
    sphere third;
-   arr[2] = third;
-   arr[2].V = vec3(0.,0.,9.);                        // Ray origin
-   arr[2].W = normalize(vec3(vPos.xy, -3));          // Ray direction
-   arr[2].S = vec4(cos(uTime), -sin(uTime),-3.,.5);  // Animate sphere
-   arr[2].t = raytraceSphere(arr[2]);                // Ray trace sphere
+   arr[0] = third;
+   arr[0].V = vec3(0.,0.,9.);                        // Ray origin
+   arr[0].W = normalize(vec3(vPos.xy, -3));          // Ray direction
+   arr[0].S = vec4(cos(uTime), -sin(uTime),-3.,.5);  // Animate sphere
+   arr[0].t = raytraceSphere(arr[0]);                // Ray trace sphere
    #endif
+
 
    for (int i = 0; i < HOW_MANY; i++) {
        if (arr[i].t.x > 0.) {
@@ -158,6 +161,10 @@ void main() {
 
    gl_FragColor = vec4(sqrt(c), 1.);             // Final pixel color
 }
+
+
+
+
 
 
 
