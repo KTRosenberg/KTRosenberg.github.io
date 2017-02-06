@@ -55,13 +55,14 @@ void main() {
 class example
 ---------------------------------------------------------------------
 
-
-
 varying vec3 vPos;                               // Position in image
 uniform float uTime;                             // Time
 vec3 LDir = normalize(vec3(1.,-sin(uTime),.5));  // Light direction
 vec3 LDir2 = normalize(vec3(-cos(uTime),0.,.5));  // Light direction
 vec3 LDir3 = normalize(vec3(1., sin(uTime), sin(uTime)));  // Light direction
+
+#define TEXTURE_CONST uTime
+#define TEXTURE_CONST_2 -cos(uTime)
 
 #define HOW_MANY (3)
 
@@ -78,6 +79,12 @@ struct sphere {
 
 sphere arr[HOW_MANY];
 vec3 ray_dirs[HOW_MANY];
+vec2 alteration;
+
+float generate(vec2 p)
+{
+    return (sin(TEXTURE_CONST) + sin((TEXTURE_CONST_2*p.y*p.x) + cos(p.x)*.01));
+}
 
 vec2 raytraceSphere(vec3 V, vec3 W, vec4 S) {
    V -= S.xyz;
@@ -103,7 +110,7 @@ vec2 raytraceSphere(sphere s)
 }
 
 void main() {
-   vec3 c = vec3(.1*sin(vPos.y+uTime),.01,.04);                    // Dark background
+   vec3 c = vec3(.1*sin(vPos.y+uTime),.01,.04) + 0.005*vPos.x;                    // Dark background
 
    sphere first;
    arr[0] = first;
@@ -139,11 +146,20 @@ void main() {
            float brightness3 = (BRIGHT_3) ? max(0., dot(N, LDir3)) : 0.;
            brightness = mix(.1, brightness + brightness2 + brightness3, .5);      // Diffuse surface
            c = vec3(2.*vPos.y+sin(uTime),0.0,.2) * brightness;
+
+           alteration = vec2(0. / 200., 0. / 200.);
+           float z = generate(4. * vPos.xy + alteration);
+           if (z > 0.) {
+               c = mix(c, vec3(1., 1., 1.), c);
+           }
+           
        }
    }
 
    gl_FragColor = vec4(sqrt(c), 1.);             // Final pixel color
 }
+
+
 
 ---------------------------------------------------------------------
 Assignment 2 Start
