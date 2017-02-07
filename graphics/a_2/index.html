@@ -197,24 +197,26 @@ void main(void)
     spheres[2].t = raytraceSphere(spheres[2]);
 
     int sphere_idx = get_idx_sphere_to_draw();
-    for (int i = 0; i < NUM_SPHERES; i++) {
-        if (i == sphere_idx) {
-            /* point on sphere */
-            vec3 P = spheres[i].V + spheres[i].t.x * spheres[i].W;
-            /* Surface normal */
-            vec3 N = normalize(P - spheres[i].S.xyz);
-            /* brightness for diffuse surface */
-            float brightness = calc_brightness(N);
-            c = vec3(2. * vPos.y + sin(uTime), 0.0, .2) * brightness;
+    if (sphere_idx != -1) {
+        for (int i = 0; i < NUM_SPHERES; i++) {
+            if (i == sphere_idx) {
+                /* point on sphere */
+                vec3 P = spheres[i].V + spheres[i].t.x * spheres[i].W;
+                /* Surface normal */
+                vec3 N = normalize(P - spheres[i].S.xyz);
+                /* brightness for diffuse surface */
+                float brightness = calc_brightness(N);
+                c = vec3(2. * vPos.y + sin(uTime), 0.0, .2) * brightness;
 
-            float z = calc_pattern(4. * vPos.xy);
-            if (z > 0.) {
-                c = mix(c, vec3(1., 1., 1.), c);
+                float z = calc_pattern(4. * vPos.xy);
+                if (z > 0.) {
+                    c = mix(c, vec3(1., 1., 1.), c);
+                }
             }
         }
     }
 
-   gl_FragColor = vec4(sqrt(c), 1.);             // final pixel color
+    gl_FragColor = vec4(sqrt(c), 1.);             // final pixel color
 }
 ---------------------------------------------------------------------
 February 2017 Ray-tracing and Fragment Shader Example
