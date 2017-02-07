@@ -2,6 +2,8 @@
 varying vec3 vPos;                               /* Position in image */
 uniform float uTime;                             /* Time */
 
+#define MY_MAX_FLOAT (50.)
+
 /* light directions */
 
 /* enable specific light directions */
@@ -97,8 +99,7 @@ vec2 raytraceSphere(vec3 V, vec3 W, vec4 S)
 int get_idx_sphere_to_draw(void)
 {
     int index = -1;
-    const float max_t_val = 50.;
-    float min_t_x = max_t_val;
+    float min_t_x = MY_MAX_FLOAT;
     
     for (int i = 0; i < NUM_SPHERES; i++) {
         float t_x = spheres[i].t.x;
