@@ -2,7 +2,7 @@
 varying vec3 vPos;                               /* Position in image */
 uniform float uTime;                             /* Time */
 
-/* Light directions */
+/* light directions */
 
 /* enable specific light directions */
 #define BRIGHT_1 true
@@ -165,7 +165,7 @@ void main(void)
     
     /* second sphere */
     spheres[1] = init_sphere(vec3(0., 0., 0.), 
-                             normalize(vec3(vPos.xy, sin(uTime))),  
+                             normalize(vec3(vPos.xy, sin(uTime))),
                              vec4(cos(uTime),sin(uTime), -5., .5));           
     spheres[1].t = raytraceSphere(spheres[1]);
 
@@ -193,5 +193,5 @@ void main(void)
         }
     }
 
-   gl_FragColor = vec4(sqrt(c), 1.);             // Final pixel color
+   gl_FragColor = vec4(sqrt(c), 1.);             // final pixel color
 }
