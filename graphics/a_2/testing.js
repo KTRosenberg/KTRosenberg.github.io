@@ -3,14 +3,14 @@ varying vec3 vPos;                               // Position in image
 uniform float uTime;                             // Time
 vec3 LDir = normalize(vec3(1.,-sin(uTime),.5));  // Light direction
 
-struct s_vec {
+struct sphere {
   vec3 V;
   vec3 W;
   vec4 S;
   vec2 t;
 };
 
-s_vec arr[3];
+sphere arr[3];
 
 vec2 raytraceSphere(vec3 V, vec3 W, vec4 S) {
    V -= S.xyz;
@@ -21,7 +21,7 @@ vec2 raytraceSphere(vec3 V, vec3 W, vec4 S) {
                        : vec2(-B - discrim, -B + discrim) / 2.;
 }
 
-vec2 raytraceSphere(s_vec s)
+vec2 raytraceSphere(sphere s)
 {
    vec3 V = s.V;
    vec3 W = s.W;
@@ -38,7 +38,7 @@ vec2 raytraceSphere(s_vec s)
 void main() {
    vec3 c = vec3(.01,.01,.04);                // Dark background
 
-   s_vec cur;
+   sphere cur;
    arr[0] = cur;
    arr[0].V = vec3(0.,0.,0.);                     // Ray origin
    arr[0].W = normalize(vec3(vPos.xy, -3.));       // Ray direction
