@@ -52,7 +52,9 @@ vec3 phong(vec3 N, vec3 E, vec3 A, vec3 D, vec4 S) {
       
       for (int s = 0; s < uSpheres_length; s++) {
           vec4 sphere_comp = uSpheres[s];
-          vec2 collision = raytraceSphere(P + EPSILON, LDir, sphere_comp);
+          vec2 collision = raytraceSphere(P + (N * EPSILON),
+	                        	  LDir,
+					  sphere_comp);
           if (collision.x < 1000.) {
               is_shadowed = true;
 	      break;
