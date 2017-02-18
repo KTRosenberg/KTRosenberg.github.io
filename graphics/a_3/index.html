@@ -108,9 +108,6 @@ void main() {
 </script>
    
 <script>
-addTextEditor(fss_script.innerHTML.split('---------------------------------------------------------------------'),
-              function() { canvas1.setFragmentShader(this.value); });
-
 declareUniform('uSpheres', 'vec4', 3);
 declareUniform('uSColors', 'vec4', 3);
 declareUniform('uLDirs', 'vec3', 2);
