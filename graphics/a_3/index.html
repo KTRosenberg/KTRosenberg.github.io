@@ -16,6 +16,16 @@
 </script>
 
 <script id='fss_script' type='x-shader/x-fragment'>
+---------------------------------------------------------------------
+varying vec3 vPos;                               // Position in image
+uniform float uTime;                             // Time
+
+void main() {
+   vec3 c = vec3(.01,.01,.04);                   // Dark background
+
+   gl_FragColor = vec4(sqrt(c), 1.);             // Final pixel color
+}
+---------------------------------------------------------------------
 varying vec3 vPos;                             // Position in image
 uniform float uTime;                           // Time
 vec4 C;
