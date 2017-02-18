@@ -55,9 +55,7 @@ vec3 phong(vec3 N, vec3 E, vec3 A, vec3 D, vec4 S) {
           vec2 collision = raytraceSphere(P + EPSILON, LDir, sphere_comp);
           if (collision.x < 1000.) {
               is_shadowed = true;
-              if (is_shadowed) {
-                  break;
-              }
+	      break;
           }
       }
       
