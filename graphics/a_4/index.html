@@ -56,7 +56,9 @@ vec2 raytraceSphere(vec3 V, vec3 W, Sphere S) {
 
 vec3 backgroundColor(vec3 dir) {
    float t = .5 - .5 * dir.y;
-   return mix(vec3(.2,.01,.01), vec3(.01,.01,.1), 1. - t * t);
+   vec3 c = vec3(.001 * tan(dot(vPos.x, vPos.y) + uTime), .01, .0) + 0.005 * vPos.y;
+   vec3 other = mix(vec3(.2,.01,.01), vec3(.01,.01,.1), 1. - t * t);
+   return mix(c, other, 0.);
 }
 
 vec3 phong(vec3 P, vec3 N, vec3 E, Material C) {
@@ -84,8 +86,12 @@ vec3 V, W, P, E, N;
 
 bool raytrace() {
    float distance = 1000.;
+   float entry = -1.;
+   float exit = 1000.;
    for (int i = 0 ; i < NSPHERES ; i++) {
       vec2 t = raytraceSphere(V, W, uSpheres[i]);
+      entry = max(entry, t.x);
+      exit = min(exit, t.y);
       if (t.x < distance) {
          C = uSpheres[i].material;                // Material for this object
          P = V + t.x * W;                         // Point on sphere
@@ -93,6 +99,10 @@ bool raytrace() {
          N = normalize(P - uSpheres[i].center);   // Surface normal
          distance = t.x;
       }
+   }
+
+   if (entry > exit) {
+       distance = 1000.;
    }
    return distance < 1000.;
 }
@@ -102,23 +112,30 @@ void main() {
 
    V = vec3(0.,0.,0.);                         // Ray origin
    W = normalize(vec3(vPos.xy, -3.));          // Ray direction
-   if (! raytrace())
-      c = backgroundColor(vPos);
-   else
+   if (! raytrace()) {
+      c = backgroundColor(vPos) + .01*asin(turbulence(vPos + uTime));
+   } else {
+   
       for (int bounce = 0 ; bounce < 5 ; bounce++) {
+         float ex = noise(vec3(sin(uTime/3.), cos(uTime/2.), uTime));
          float attenuation = pow(0.6, float(bounce + 1));
-         c += attenuation * phong(P, N, E, C);
+         c += attenuation * phong(P, N, vec3(ex, ex, ex), C);
          c += .5 * attenuation * backgroundColor(W);
          V = P + .001 * W;
          W = reflect(W, N);
          if (! raytrace())
             break;
       }
-         
+   }      
    gl_FragColor = vec4(sqrt(c), 1.);           // Final pixel color
 }
+
+
+
 ---------------------------------------------------------------------
-Many differently colored light sources.
+In hindsight, building an artificial tornado generator
+with that mystical power stone was not the greatest idea.
+(I apologize for the lag.)
 </script>
    
 <script>
@@ -181,11 +198,10 @@ gl_start(canvas1, vs_script.innerHTML,
                                           , .5 * .05
 					  , .5 * mix(.05, .5, t));
       }
-   
       var a = [1,.8,0];
       for (var i = 0 ; i < uSpheres.length ; i++) {
          let j = (i + 1) % 3, k = (i + 2) % 3;
-         gl.uniform1f(uSpheres[i].radius, .5);
+         gl.uniform1f(uSpheres[i].radius, .7);
          gl.uniform1f(uSpheres[i].material.power, 10);
    
          gl.uniform3f(uSpheres[i].material.ambient , a[i]*.1,a[j]*.1,a[k]*.1);
