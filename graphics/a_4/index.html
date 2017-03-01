@@ -19,7 +19,6 @@
 <script id='fss_script' type='x-shader/x-fragment'>
 
 ---------------------------------------------------------------------
-
 varying vec3 vPos;                             // Position in image
 uniform float uTime;                           // Time
 
@@ -57,9 +56,7 @@ vec2 raytraceSphere(vec3 V, vec3 W, Sphere S) {
 
 vec3 backgroundColor(vec3 dir) {
    float t = .5 - .5 * dir.y;
-   //
-   vec3 c = vec3(.001 * tan(dot(vPos.x, vPos.y) + uTime), .01, .1 * sin(vPos.x)) + 0.005 * vPos.y;
-   //
+   vec3 c = vec3(.001 * tan(dot(vPos.x, vPos.y) + uTime), .01, .0) + 0.005 * vPos.y;
    vec3 other = mix(vec3(.2,.01,.01), vec3(.01,.01,.1), 1. - t * t);
    return mix(c, other, 0.);
 }
@@ -89,8 +86,12 @@ vec3 V, W, P, E, N;
 
 bool raytrace() {
    float distance = 1000.;
+   float entry = -1.;
+   float exit = 1000.;
    for (int i = 0 ; i < NSPHERES ; i++) {
       vec2 t = raytraceSphere(V, W, uSpheres[i]);
+      entry = max(entry, t.x);
+      exit = min(exit, t.y);
       if (t.x < distance) {
          C = uSpheres[i].material;                // Material for this object
          P = V + t.x * W;                         // Point on sphere
@@ -98,6 +99,10 @@ bool raytrace() {
          N = normalize(P - uSpheres[i].center);   // Surface normal
          distance = t.x;
       }
+   }
+
+   if (entry > exit) {
+       distance = 1000.;
    }
    return distance < 1000.;
 }
@@ -125,8 +130,12 @@ void main() {
    gl_FragColor = vec4(sqrt(c), 1.);           // Final pixel color
 }
 
+
+
 ---------------------------------------------------------------------
-In hindsight, making an artificial tornado generator was not the greatest idea.
+In hindsight, building an artificial tornado generator
+with that mystical power stone was not the greatest idea.
+(I apologize for the lag.)
 </script>
    
 <script>
@@ -139,7 +148,7 @@ function gl_uniform3f(gl, name, a,b,c)   { gl.uniform3f(gl.getUniformLocation(gl
 function gl_uniform4f(gl, name, a,b,c,d) { gl.uniform4f(gl.getUniformLocation(gl.program, name), a,b,c,d); }
 
 var NLIGHTS = 10;
-var NSPHERES = 4;
+var NSPHERES = 3;
 
 insertFragmentShaderCode(noise_shader);
 insertFragmentShaderCode('#define NLIGHTS ' + NLIGHTS + '\n');
@@ -189,11 +198,10 @@ gl_start(canvas1, vs_script.innerHTML,
                                           , .5 * .05
 					  , .5 * mix(.05, .5, t));
       }
-      var radii = [.7, .7, .7];
       var a = [1,.8,0];
       for (var i = 0 ; i < uSpheres.length ; i++) {
          let j = (i + 1) % 3, k = (i + 2) % 3;
-         gl.uniform1f(uSpheres[i].radius, radii[i]);
+         gl.uniform1f(uSpheres[i].radius, .7);
          gl.uniform1f(uSpheres[i].material.power, 10);
    
          gl.uniform3f(uSpheres[i].material.ambient , a[i]*.1,a[j]*.1,a[k]*.1);
