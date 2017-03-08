@@ -1,5 +1,13 @@
+   var gameIsSet = false;
+   
+
+
    var startTime = Date.now() / 1000, time = startTime;
    function draw2DCanvases(canvases) {
+      if (!gameIsSet) {
+          canvas1.Init();
+          gameIsSet = true;
+      }
       for (var i = 0 ; i < canvases.length ; i++)
          trackCursor(canvases[i]);
       setInterval(function() {

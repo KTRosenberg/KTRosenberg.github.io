@@ -142,24 +142,79 @@ loop="true" src="Tear_ver_5_6_50.mp3" autostart="true" width=2 height="0">
 
     // laser projectile
     function translateProjectileBy(x, y) {
+        this.x += x;
+        if (this.x > 1000) {
+            this.x = 10;
+        }
+        else if (this.x < 0) {
+            this.x = 990;
+        } 
+        this.y += y;
+        if (this.y > 1000) {
+            this.y = 10;
+        }
+        else if (this.y < 0) {
+            this.y = 990;
+        } 
     }
-    function drawProjectile(projectile) {
+    
+    var count = 0;
+    function drawProjectile(g, projectile) {
+        // outer shape
+
+        g.fillStyle = "red";
+        /*
+        g.fillRect(projectile.x - (projectile.width / 2), 
+                   projectile.y - (projectile.height / 2),  
+                   projectile.width, projectile.height);
+        */
+        g.translate(projectile.x, projectile.y);
+        var rotation = (count) * (Math.PI / 180);
+        if (count == 360) {
+            count = 0;
+        }
+        
+        g.rotate(rotation);
+        g.fillRect(-(projectile.width / 2), -(projectile.height / 2),  
+                   projectile.width, projectile.height);
+        g.rotate(-rotation);
+
+        // inner shape
+        g.fillStyle = "yellow";
+        g.rotate(rotation / 4);
+        g.fillRect(-(projectile.width / 4), -(projectile.height / 4),  
+           projectile.width / 2, projectile.height / 2);         
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        
+        /*
+        g.fillStyle = "rgba(0, 1, 0, 0.01)";
+        g.fillRect(0, 0, 50, 50);
+        
+                g.fillRect(projectile.x - (projectile.width / 2),
+                   projectile.y - (projectile.height / 2),
+                   projectile.width, projectile.height * 4);
+        */
+        
+        count += 20;                 
+        
     }
-    function Projectile(width, height, x, y) {
+    function Projectile(x, y, width, height) {
         this.x = x;
         this.y = y;
+        this.width = width;
+        this.height = height;
         this.distPer = 20;
         this.orient = Controls.up;
         this.translateProjectileBy = translateProjectileBy;
     }
-    Projectile.drawProjectile = drawProjectile;
     
-    var laser = new Projectile(10, 10, this.width / 2, this.height + 20);
+    // laser projectile object
+    var laser = null;
     
     // mirrors
-    function drawMirror() {
+    function drawMirror(g) {
     }
-    function Mirror(width, height, x, y) {
+    function Mirror(x, y, width, height) {
         this.x = x;
         this.y = y;
         this.drawMirror = drawMirror;
@@ -168,6 +223,10 @@ loop="true" src="Tear_ver_5_6_50.mp3" autostart="true" width=2 height="0">
     
     // main update loop ////////////////////////////////////////////////////////
 
+    canvas1.Init = function() {
+        laser = new Projectile((this.width / 2), (this.height / 2), 20, 20);
+    }
+    
     canvas1.update = function(g) {
         if (!gameIsRunning) {
             return;
@@ -192,9 +251,8 @@ loop="true" src="Tear_ver_5_6_50.mp3" autostart="true" width=2 height="0">
         for (var row = 0; row < 5; ++row) {
             var rowEndPoint = row * 200;
             g.beginPath();
-            var curTimeLoc = (rowEndPoint + (time * 200)) % 1000;
-            g.moveTo(0, curTimeLoc);
-            g.lineTo(this.width, curTimeLoc);
+            g.moveTo(0, rowEndPoint);
+            g.lineTo(this.width, rowEndPoint);
             g.stroke();
         }
         for (var col = 1; col < 5; ++col) {
@@ -206,7 +264,7 @@ loop="true" src="Tear_ver_5_6_50.mp3" autostart="true" width=2 height="0">
         }
         
         
-
+      /*
       var x = this.cursor.x;
       var y = this.cursor.y;
       var z = this.cursor.z;
@@ -232,6 +290,11 @@ loop="true" src="Tear_ver_5_6_50.mp3" autostart="true" width=2 height="0">
       g.lineTo(x+flapX, y-flapY);
       g.lineTo(x+flapX+flapX2, y-flapY-flapY2);
       g.stroke();
+      */
+      
+      drawProjectile(g, laser);
+            
+      laser.translateProjectileBy(0, -10);
    }
 
    draw2DCanvases([canvas1]);
