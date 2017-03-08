@@ -141,22 +141,6 @@ loop="true" src="Tear_ver_5_6_50.mp3" autostart="true" width=2 height="0">
     // object types ////////////////////////////////////////////////////////////
 
     // laser projectile
-    function translateProjectileBy(x, y) {
-        this.x += x;
-        if (this.x > 1000) {
-            this.x = 10;
-        }
-        else if (this.x < 0) {
-            this.x = 990;
-        } 
-        this.y += y;
-        if (this.y > 1000) {
-            this.y = 10;
-        }
-        else if (this.y < 0) {
-            this.y = 990;
-        } 
-    }
     
     var count = 0;
     function drawProjectile(g, projectile) {
@@ -197,6 +181,26 @@ loop="true" src="Tear_ver_5_6_50.mp3" autostart="true" width=2 height="0">
         
         count += 20;                 
         
+    }
+    
+    function translateProjectileBy(x, y, doWrapScreen) {
+        this.x += x;
+        this.y += y;
+        if (doWrapScreen) {
+            if (this.x > 1000) {
+                this.x = 10;
+            }
+            else if (this.x < 0) {
+                this.x = 990;
+            } 
+            if (this.y > 1000) {
+                this.y = 10;
+            }
+            else if (this.y < 0) {
+                this.y = 990;
+            }
+        }
+ 
     }
     function Projectile(x, y, width, height) {
         this.x = x;
@@ -294,7 +298,7 @@ loop="true" src="Tear_ver_5_6_50.mp3" autostart="true" width=2 height="0">
       
       drawProjectile(g, laser);
             
-      laser.translateProjectileBy(0, -10);
+      laser.translateProjectileBy(0, -10, true);
    }
 
    draw2DCanvases([canvas1]);
