@@ -1,25 +1,211 @@
+<meta charset="utf-8">
+<embed 
+loop="true" src="Tear_ver_5_6_50.wav" autostart="true" width=2 height="0"> 
+</embed>
 <tr>
-<td><canvas id=canvas1 width=400 height=300></td>
+<td><canvas id=canvas1 width=1000 height=1000></td>
 <td width=50></td>
-<td>
-TEMPORARILY USING IN-CLASS EXAMPLE FOR BASE    
-Hi, I am a bird who has had its morning espresso.
-</td>
+<div style="display:none;">
+  <img id="mirror_sprites" src="sprites/mirror_4_pos_sheet.png"
+       width="800" height="200">
+</div>
 </tr>
 
 <script src=drawlib1.js></script>
 <script>
+    // user input //////////////////////////////////////////////////////////////
+    // control states
+    var up = false; // w 87
+    var down = false; // s 83
+    var left = false; // a 65
+    var right = false; // d 68
+    var diagonalRight = false; // e 69
+    var diagonalLeft = false; // q 81
+    var gameIsRunning = true;
+
+    // control options
+    var Controls = {
+        up : 87,                 
+        down : 83,
+        left : 65,
+        right : 68,  
+        diagonalRight : 69,
+        diagonalLeft : 81,
+
+        leaveGame : 76
+    };
+    var curControl = Controls.up;
+    
+    function keyDownHandler(event) {
+        if (event.defaultPrevented) {
+            return;
+        }
+        changeControl = true;
+        // up
+        if (event.keyCode == Controls.up) {
+            up = true
+        }
+        // down
+        else if (event.keyCode == Controls.down) {
+            down = true;
+        }
+        // left
+        else if (event.keyCode == Controls.left) {
+            left = true;
+        }
+        // right
+        else if (event.keyCode == Controls.right) {
+            right = true;
+        }
+        // diagonal right
+        else if (event.keyCode == Controls.diagonalRight) {
+            diagonalRight = true;
+        }
+        // diagonal left
+        else if (event.keyCode == Controls.diagonalLeft) {
+            diagonalLeft = true;
+        }
+        else {
+            changeControl = false;
+            if (event.keyCode == Controls.leaveGame) {
+                gameIsRunning = false;
+            }
+        }
+        if (changeControl) {
+            curControl = event.keyCode;
+        }
+    }
+
+    function keyUpHandler(event) {
+        if (event.defaultPrevented) {
+            return;
+        }
+
+        // up
+        if (event.keyCode == Controls.up) {
+            up = false
+        }
+        // down
+        else if (event.keyCode == Controls.down) {
+            down = false;
+        }
+        // left
+        else if (event.keyCode == Controls.left) {
+            left = false;
+        }
+        // right
+        else if (event.keyCode == Controls.right) {
+            right = false;
+        }
+        // diagonal right
+        else if (event.keyCode == Controls.diagonalRight) {
+            diagonalRight = false;
+        }
+        // diagonal left
+        else if (event.keyCode == Controls.diagonalLeft) {
+            diagonalLeft = false;
+        }
+    }
+    window.addEventListener('keydown', keyDownHandler, false);
+    window.addEventListener('keyup', keyUpHandler, false);
+    
+    function getOrientName(orient) {
+        switch (orient) {
+        // up
+        case Controls.up: {
+            return "O_UP";
+        }
+        // down
+        case Controls.down: {
+            return "O_DOWN";
+        }
+        // left
+        case Controls.left: {
+            return "O_LEFT";
+        }
+        // right
+        case Controls.right: {
+            return "O_RIGHT";
+        }
+        // diagonal right
+        case Controls.diagonalRight: {
+            return "O_DIAGONAL_RIGHT";
+        }
+        // diagonal left
+        case Controls.diagonalLeft: {
+            return "O_DIAGONAL_LEFT";
+        }
+        }
+    }
+
+    // object types ////////////////////////////////////////////////////////////
+
+    // laser projectile
+    function translateProjectileBy(x, y) {
+    }
+    function drawProjectile(projectile) {
+    }
+    function Projectile(width, height, x, y) {
+        this.x = x;
+        this.y = y;
+        this.distPer = 20;
+        this.orient = Controls.up;
+        this.translateProjectileBy = translateProjectileBy;
+    }
+    Projectile.drawProjectile = drawProjectile;
+    
+    var laser = new Projectile(10, 10, this.width / 2, this.height + 20);
+    
+    // mirrors
+    function drawMirror() {
+    }
+    function Mirror(width, height, x, y) {
+        this.x = x;
+        this.y = y;
+        this.drawMirror = drawMirror;
+    }
+    Mirror.orient = Controls.up;
+    
+    // main update loop ////////////////////////////////////////////////////////
 
     canvas1.update = function(g) {
-      g.lineWidth = 5;
-
-      g.beginPath();
-      g.moveTo(0, 0);
-      g.lineTo(this.width, 0);
-      g.lineTo(this.width, this.height);
-      g.lineTo(0, this.height);
-      g.lineTo(0, 0);
-      g.stroke();
+        if (!gameIsRunning) {
+            return;
+        }
+        
+        Mirror.orient = curControl;
+        /*
+        console.log("up: " + up + "\ndown: " + down 
+                    + "\nleft: " + left + "\nright: " + right 
+                    + "\ndiagonal right: " + diagonalRight 
+                    + "\ndiagonal left: " + diagonalLeft);
+        */          
+        console.log(getOrientName(Mirror.orient));
+        
+        ////////////////////////////////////////////////////////////////////////
+        
+        // background color
+        g.fillStyle = "beige";
+        g.fillRect(0, 0, this.width, this.height);
+        
+        // draw rectangular grid backdrop
+        for (var row = 0; row < 5; ++row) {
+            var rowEndPoint = row * 200;
+            g.beginPath();
+            var curTimeLoc = (rowEndPoint + (time * 200)) % 1000;
+            g.moveTo(0, curTimeLoc);
+            g.lineTo(this.width, curTimeLoc);
+            g.stroke();
+        }
+        for (var col = 1; col < 5; ++col) {
+            var colEndPoint = col * 200;
+            g.beginPath();
+            g.moveTo(colEndPoint, 0);
+            g.lineTo(colEndPoint, this.height);
+            g.stroke();        
+        }
+        
+        
 
       var x = this.cursor.x;
       var y = this.cursor.y;
