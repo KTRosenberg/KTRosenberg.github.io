@@ -2,21 +2,17 @@
 <embed 
 loop="true" src="Tear_ver_5_6_50.mp3" autostart="true" width=2 height="0"> 
 </embed>
+
 <table>
 <tr>
 <td><canvas id=canvas1 width=1000 height=1000></td>
-<td width=50></td>
 <div style="display:none;">
   <img id="mirror_sprites" src="img/mirror_4_pos_sheet.png" width="800" height="200">
   <img id="bg" src="img/bg.png" width="1000" height="1000">
 </div>
 </tr>
-
-<tr>
-<td><canvas id=canvas2 width = 500 height=500></td>
-<td width=50></td>
-</tr>
 </table>
+
 
 <script src=drawlib1.js></script>
 <script>    
@@ -546,14 +542,80 @@ loop="true" src="Tear_ver_5_6_50.mp3" autostart="true" width=2 height="0">
             canvas1.resetLaserPosition(laser);
         }
     }
-   
-    canvas2.update = function(g) {
-        g.fillStyle = 'ingigo';
-        g.font = '50px Cambria';
-        g.fillText("Laser Mirrors\n\nINSTRUCTIONS:", 2, 20);
-    }
 
-   draw2DCanvases([canvas1, canvas2]);
+   draw2DCanvases([canvas1]);
 </script>
 
+<html>
+<body>
+    <h1> Laser Mirrors Context and Instructions </h1>
+        <p>
+        mirror graphics, music, and game concept by Karl Toby Rosenberg,<br>
+        recreation of very old Java+Processing version I made years ago<br>
+        for the sake of learning more Javascript (and fun!). The point system<br>
+        has not yet been implemented, but the animations are improved here.<br>
+        <br>
+        INSTRUCTIONS:<br>
+        OBJECTIVE: Laser Mirrors is a fast-paced mini-game The game map consists<br> 
+        of an overhead view on 8 mirrors. The player controls the 8 mirrors<br>
+        simultaneously, rotating them to guide the player "laser".<br>
+        In the original game, we would move towards blue point markers<br> 
+        (not implemented yet here). The goal would be to earn as many points<br> 
+        as possible within the time limit, or to achieve a new personal high<br>
+        score. (The game stores a record of the high score and displays it.)<br>
+        <br>
+        CONTROLS:<br>
+        <br>
+        Use the arrow keys to control the mirrors.<br>
+        (Key, Mirror Orientation)<br>
+        W or S:  |<br>
+        A or D:  -<br>
+        Q or X:  /<br>
+        Z OR E:  \<br>
+
+        There is a learning curve, as the controls do not correspond with<br> 
+        the direction the player wants the laser to move, but rather the angle<br> 
+        of the mirrors.<br>
+        The player must think about the movement of the mirror as it relates<br>
+        to the angle of the mirror<br>
+<br>
+<br>
+        MOVEMENT:<br>
+<br>
+        Imagine that the laser moves rightwards:<br>
+<br>
+            REFLECTS DIRECTLY BACKWARDS if a mirror surface is flat towards the direction of movement<br>
+            L ------> |<br>
+            L<------- |<br>
+            <br>
+            REFLECTS AT A RIGHT ANGLE if a mirror is angled at 45º<br>
+                      ^<br>
+                      |<br>
+                      |<br>
+            L ------> /<br>
+            L ------> \<br>
+                      |<br>
+                      |<br>
+                      v<br>   
+            AVOID hitting the SHORT SIDE of a mirror.<br>
+            Otherwise the laser will be absorbed, and the laser will reset at the bottom of the screen<br>
+            <br>
+            L ------> -<br>
+                      x<br>
+<br>
+            HINT: Sometimes it is a good idea to bounce back and forth between the flat sides of a pair of mirrors,<br> 
+                  as doing so allows for time to think.<br>
+<br>
+<br>
+        original version:<br>
+        https://github.com/KTRosenberg/Laser_Mirrors_Original_Game_04_2015_ver_1_2/tree/master<br>
+<br>
+                Side-Note:<br>
+                    The controls would DEFINITELY be better using a joystick d-pad.<br>
+                    Neither arrow key combinations nor the current controls are ideal,<br>
+                    but otherwise everything works.<br>
+<br>
+        </p>
+</body>
+</html>
 
