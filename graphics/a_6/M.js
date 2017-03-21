@@ -3,37 +3,40 @@
 // M is an object containing methods that let you manipulate 4x4 matrices.
 //////////////////////////////////////////////////////////////////////////////
 
-var M = {};
+// anonymous closure
+var M = (function() {
+
+var _M = {};
 
 //////////////////////////////////////////////////////////////////////////////
 // Your task is to implement the following methods of object M:
 //////////////////////////////////////////////////////////////////////////////
 
-// M.identity  = function(m)          {           } // Set m values to identity matrix.
-// M.restore   = function(m)          {           } // Pop from a stack to set the 16 values of m. //
-// M.rotateX   = function(m, radians) {           } // Modify m, rotating about the X axis.
-// M.rotateY   = function(m, radians) {           } // Modify m, rotating about the Y axis.
-// M.rotateZ   = function(m, radians) {           } // Modify m, rotating about the Z axis.
-// M.save      = function(m)          {           } // Push the 16 values of m onto a stack. //
-// M.scale     = function(m, v)       {           } // Modify m, scaling by v[0],v[1],v[2].
-// M.transform = function(m, v)       { return m; } // Return vec v transformed by matrix m.      //
-// M.translate = function(m, v)       {           } // Modify m, translating by v[0],v[1],v[2].   //
+// _M.identity  = function(m)          {           } // Set m values to identity matrix.
+// _M.restore   = function(m)          {           } // Pop from a stack to set the 16 values of m. //
+// _M.rotateX   = function(m, radians) {           } // Modify m, rotating about the X axis.
+// _M.rotateY   = function(m, radians) {           } // Modify m, rotating about the Y axis.
+// _M.rotateZ   = function(m, radians) {           } // Modify m, rotating about the Z axis.
+// _M.save      = function(m)          {           } // Push the 16 values of m onto a stack. //
+// _M.scale     = function(m, v)       {           } // Modify m, scaling by v[0],v[1],v[2].
+// _M.transform = function(m, v)       { return m; } // Return vec v transformed by matrix m.      //
+// _M.translate = function(m, v)       {           } // Modify m, translating by v[0],v[1],v[2].   //
 
 //////////////////////////////////////////////////////////////////////////////        
 // I have given you a head start by implementing some of the methods for you.
 //
-// Notice how I use M.matrixMultiply() to help implement other methods.
+// Notice how I use _M.matrixMultiply() to help implement other methods.
 //////////////////////////////////////////////////////////////////////////////
 
-M.translate = function(m, v) {
-   M.matrixMultiply(m, M.translationMatrix(v), m);
+_M.translate = function(m, v) {
+   _M.matrixMultiply(m, translationMatrix(v), m);
 }
 
-M.translationMatrix = function(v) {
+var translationMatrix = function(v) {
    return [ 1,0,0,0, 0,1,0,0, 0,0,1,0, v[0],v[1],v[2],1 ];
 }
 
-M.matrixMultiply = function(a, b, dst) {
+_M.matrixMultiply = function(a, b, dst) {
    var n, tmp = []; 
 
    // PUT THE RESULT OF a x b INTO TEMPORARY MATRIX tmp.
@@ -50,7 +53,7 @@ M.matrixMultiply = function(a, b, dst) {
       dst[n] = tmp[n];
 }
 
-M.transform = function(m, v)  {
+_M.transform = function(m, v)  {
 
     // IF v[3] IS UNDEFINED, SET IT TO 1 (THAT IS, ASSUME v IS A POINT).
 
@@ -68,11 +71,11 @@ M.transform = function(m, v)  {
 
 var _stack = [];
 
-M.save = function(m) {
+_M.save = function(m) {
     _stack.push.apply(_stack, m);
 };
 
-M.restore = function(m) {
+_M.restore = function(m) {
     for (var i = 15; i >= 0; --i) {
         m[i] = _stack.pop();
     }
@@ -80,7 +83,7 @@ M.restore = function(m) {
 
 // SCALE
 
-M.scaleMatrix = function(v) {
+var scaleMatrix = function(v) {
     var x, y, z = 0;
     if (v instanceof Array) {
        x = v[0];
@@ -94,13 +97,13 @@ M.scaleMatrix = function(v) {
     return [x,0,0,0, 0,y,0,0, 0,0,z,0, 0,0,0,1];
 }
 
-M.scale = function(m, v) {
-    M.matrixMultiply(m, M.scaleMatrix(v), m);
+_M.scale = function(m, v) {
+    _M.matrixMultiply(m, scaleMatrix(v), m);
 }
 
 // IDENTITY
 
-M.identity = function(m) {
+_M.identity = function(m) {
     for (var i = 1; i < 16; ++i) {
         m[i] = 0;
     }
@@ -111,43 +114,43 @@ M.identity = function(m) {
 
 // ROTATE X
 
-M.rotationXMatrix = function(radians) {
+var rotationXMatrix = function(radians) {
     var c = Math.cos(radians);
     var s = Math.sin(radians);
     return [1,0,0,0, 0,c,s,0, 0,-s,c,0, 0,0,0,1];
 }
 
-M.rotateX = function(m, radians) {
-    M.matrixMultiply(m, M.rotationXMatrix(radians), m);
+_M.rotateX = function(m, radians) {
+    _M.matrixMultiply(m, rotationXMatrix(radians), m);
 }
 
 // ROTATE Y
 
-M.rotationYMatrix = function(radians) {
+var rotationYMatrix = function(radians) {
     var c = Math.cos(radians);
     var s = Math.sin(radians);
     return [c,0,-s,0, 0,1,0,0, s,0,c,0, 0,0,0,1];
 }
 
-M.rotateY = function(m, radians) {
-    M.matrixMultiply(m, M.rotationYMatrix(radians), m);
+_M.rotateY = function(m, radians) {
+    _M.matrixMultiply(m, rotationYMatrix(radians), m);
 }
 
 // ROTATE Z
 
-M.rotationZMatrix = function(radians) {
+var rotationZMatrix = function(radians) {
     var c = Math.cos(radians);
     var s = Math.sin(radians);
     return [c,s,0,0, -s,c,0,0, 0,0,1,0, 0,0,0,1];
 }
 
-M.rotateZ = function(m, radians) {
-    M.matrixMultiply(m, M.rotationZMatrix(radians), m);
+_M.rotateZ = function(m, radians) {
+    _M.matrixMultiply(m, rotationZMatrix(radians), m);
 }
 
 // PERSPECTIVE - Why not?
 
-M.perspectiveMatrix = function(v) {
+var perspectiveMatrix = function(v) {
     var x, y, z = 0;
     if (v instanceof Array) {
        x = v[0];
@@ -161,7 +164,10 @@ M.perspectiveMatrix = function(v) {
     return [1,0,0,x, 0,1,0,y, 0,0,1,z, 0,0,0,1];
 }
 
-M.perspective = function(m, v) {
-    M.matrixMultiply(m, M.perspectiveMatrix(v), m);
+_M.perspective = function(m, v) {
+    _M.matrixMultiply(m, perspectiveMatrix(v), m);
 }
 
+return _M;
+
+})();
