@@ -125,7 +125,7 @@ Parametric meshes of shapes.
       // g.lineTo(0,this.height);
       // g.lineTo(0,0);
       // g.stroke();
-      g.fillRect(0,0,this.width,this.height);
+      g.fillRect(0, 0, this.width, this.height);
 
       M.identity(m);
       M.scale(m, .5);  // Scale the scene down.
@@ -136,52 +136,85 @@ Parametric meshes of shapes.
          // center ///////////////////////////////////////////////
          M.perspective(m, [5, 3, 2]);
 
+
          M.translate(m, [Math.PI / 8 * (Math.sin(time % this.width)), 0, (Math.cos(time % this.width) * 2)]);
 
-         g.strokeStyle = "rgb(245,245,220)";
+           // for (var x = 0; x < Math.PI; x += (Math.PI / 10)) {
+           //   M.save(m);
+           //   M.rotateX(m, x * 10);
+           //   M.rotateZ(m, time);
+           //   M.translate(m, [0, 0, 10]);
+           //   M.scale(m, .1);
+           //   drawCurves(m, S.parametricMesh(S.polygon, 5, 5, [0.5]));
+           //   M.restore(m);
+           // }
          
          M.save(m);
-         M.scale(m, .5);
 
-         M.rotateX(m, time * 2 * (Math.PI / 9));
-         M.rotateZ(m, time);
-         M.rotateY(m, time * (Math.PI / 10));
+            M.scale(m, .5);
+            M.rotateX(m, time * 2 * (Math.PI / 9));
+            M.rotateZ(m, time);
+            M.rotateY(m, time * (Math.PI / 10));
 
-         drawCurves(m, S.parametricMesh(S.sphere, 20, 20, [Math.sin(time) / 2]));
+            g.strokeStyle = "rgb(245,245,220)";
+            drawCurves(m, S.parametricMesh(S.sphere, 20, 20, [Math.sin(time) / 2]));
+
+
+
+             // draw ring of cylinders
+             for (var x = 0; x < 2 * Math.PI; x += (Math.PI / 5)) {
+                 M.save(m);
+                 M.rotateX(m, x);
+
+                 M.translate(m, [0, 0, 1.2]);
+                 var factor = .2;
+                 var heightMultiplier = 2;
+                 M.scale(m, [factor * 1 / 2, factor * 1 / 2, factor * heightMultiplier]);
+                 
+                 // draw a cylinder with caps (Not sure how to generalize yet wihout knowing scale values)
+                 drawCurves(m, S.parametricMesh(S.tube, 16, 5));
+                 drawCurves(m, S.parametricMesh(S.polygon, 16, 5));
+                 M.save(m);
+                 M.translate(m, [0, 0, -heightMultiplier]);
+                 drawCurves(m, S.parametricMesh(S.polygon, 16, 5));      
+                 M.restore(m);
+
+                 M.restore(m);
+             }
+
 
          M.restore(m);
-
+         
 
 
 
          // orbitals ////////////////////////////////////////////////
          M.save(m);
          
-         M.scale(m, .72);
-         
-         M.rotateY(m, time);
+           M.scale(m, .72);
+           
+           M.rotateY(m, time);
 
-         var wobble = Math.sin((time)) / 10;
+           var wobble = Math.sin((time)) / 10;
 
-         g.strokeStyle = "green";
+           g.strokeStyle = "green";
+           var tpio3 = (2 * Math.PI) / 3;
+           M.rotateX(m, (Math.PI + wobble + .01 * time) / 1.8);
+           drawCurves(m, S.parametricMesh(S.torus, 100, .1, [0.75]));
 
-         var tpio3 = (2 * Math.PI) / 3;
-         M.rotateX(m, (Math.PI + wobble + .01 * time) / 1.8);
-         drawCurves(m, S.parametricMesh(S.torus, 100, .1, [0.75]));
+           g.strokeStyle = "red";
+           M.rotateX(m, (Math.PI + wobble + Math.sin(time)) / 1.8);
+           drawCurves(m, S.parametricMesh(S.torus, 100, .1, [0.75]));
 
-         g.strokeStyle = "red";
-         M.rotateX(m, (Math.PI + wobble + Math.sin(time)) / 1.8);
-         drawCurves(m, S.parametricMesh(S.torus, 100, .1, [0.75]));
-
-         g.strokeStyle = "violet";
-         M.rotateX(m, (Math.PI + wobble + Math.sin(-wobble * Math.cos(time))) / 1.8);
-         drawCurves(m, S.parametricMesh(S.torus, 100, .1, [0.75]));
-         g.strokeStyle = "grey";
-
-         drawCurves(m, S.parametricMesh(S.torus, 100, .1, [2 * (Math.sin(time) + 1.0)]));
+           g.strokeStyle = "violet";
+           M.rotateX(m, (Math.PI + wobble + Math.sin(-wobble * Math.cos(time))) / 1.8);
+           drawCurves(m, S.parametricMesh(S.torus, 100, .1, [0.75]));
+           
+           g.strokeStyle = "grey";
+           drawCurves(m, S.parametricMesh(S.torus, 100, .1, [2 * (Math.sin(time) + 1.0)]));
 
          M.restore(m);
-
+         
 
 
          // //
@@ -193,11 +226,7 @@ Parametric meshes of shapes.
          // M.restore(m);
          // //
 
-         // M.save(m);
-         // M.rotateZ(m, time);
-         // drawCurves(m, S.parametricMesh(S.polygon, 5, 5, [0.5]));
-         // M.restore(m);
-         // M.save(m);
+
          // M.rotateY(m, -time);
          // drawCurves(m, S.parametricMesh(S.tube, 5, 5, [0.5]));
          // M.restore(m);
@@ -206,7 +235,7 @@ Parametric meshes of shapes.
       M.restore(m);
 
 
-   }
+   };
 
    // WE ARE DRAWING ONLY ONE CANVAS.
 
