@@ -22,16 +22,29 @@ var S = {};
       return C;
    }
 
-   S.tube = function(u, v) {
-      var theta = 2 * Math.PI * u;
+   S.tube = function(u, v, optList) {
+      var optArg = S._getOptArg(0, optList);
+      var fraction = (optArg.isValid && optArg.arg != 0) ? optArg.arg : 1;
+
+      var theta = 2 * Math.PI * u / fraction;
       return [ Math.cos(theta),
                Math.sin(theta),
-	       2 * v - 1 ];
+	            2 * v - 1 ];
+   }
+
+   S.polygon = function(u, v, optList) {
+      var optArg = S._getOptArg(0, optList);
+      var fraction = (optArg.isValid && optArg.arg != 0) ? optArg.arg : 1;
+
+      var theta = 2 * Math.PI * u / fraction;
+      return [ v * Math.cos(theta),
+               v * Math.sin(theta),
+               1];
    }
 
    S.sphere = function(u, v, optList) {
       var optArg = S._getOptArg(0, optList);
-      var offset = (optArg.isValid) ? optArg.arg : 0.5; 
+      var offset = (optArg.isValid) ? optArg.arg : 0.5;
       var theta = 2 * Math.PI * u;
       var phi = Math.PI * (v - offset);
       return [
@@ -42,7 +55,7 @@ var S = {};
    }
 
    S.torus = function(u, v, optList) {
-      var optArg = S._getOptArg(0, opList);
+      var optArg = S._getOptArg(0, optList);
       var r = (optArg.isValid) ? optArg.arg : 0.5;
 
       var theta = 2 * Math.PI * u;
@@ -54,11 +67,11 @@ var S = {};
       ];
    }
 
-   S._getOptArg = function(index, opList) {
+   S._getOptArg = function(index, optList) {
       var arg = null;
       var isValid = false;
-      if (opList !== undefined && opList.length > index) {
-         offset = opList[0];
+      if (optList !== undefined && optList.length > index) {
+         arg = optList[0];
          isValid = true;
       }
       return {isValid: isValid, arg : arg};
