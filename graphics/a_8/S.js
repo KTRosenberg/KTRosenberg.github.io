@@ -78,5 +78,5 @@ var S = (function() {
       return {isValid: isValid, arg : arg};
    };
    
-   return _S;
+   return _S:
 }());
