@@ -1,11 +1,16 @@
-
 <table>
 
 <tr>
 <td><canvas id=canvas1 width=600 height=400></td>
 <td width=50></td>
 <td valign=top>
-Parametric meshes of shapes.
+<big><b>
+My KTR symbol with Hermite Curves,<br>
+Multiple Multi-Splines,<br>
+Randomly Generated,<br>
+<br>
+Click window to change curve colors<br> 
+</b></big>
 </td>
 </tr>
 
@@ -14,55 +19,137 @@ Parametric meshes of shapes.
 <script src=drawlib2.js></script>
 <script src=M.js></script>
 <script src=S.js></script>
+<script src=SP.js></script>
 <script>
 
+   function initColorsArray(numColors) {
+     colors = [];
+     for (var i = 0; i < numColors; i++) {
+        _rgb = {};
+        _rgb._r = getRandomNumber(0, 256);
+        _rgb._g = getRandomNumber(0, 256);
+        _rgb._b = getRandomNumber(0, 256);
+        colors.push(_rgb);
+     }
+     return colors;
+   }
+
+   var numCurves = getRandomNumber(2, 16);
    var m = [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0];
+   var bgCurves = initRandomHermiteCurves(numCurves);
+   var colors = initColorsArray(numCurves);
 
-   var Hermite = [2,-3,0,1, -2,3,0,0, 1,-2,1,0, 1,-1,0,0];
 
-   function cubic(A, t) { return A[0] * t*t*t + A[1] * t*t + A[2] * t + A[3]; }
 
    canvas1.update = function(g) {
+   // var bgCurves = initInClassExample();
       g.lineCap = 'round';
       g.lineJoin = 'round';
       g.lineWidth = 1;
 
+
       // OUTLINE THE CANVAS
 
-      g.beginPath();
-      g.moveTo(0,0);
-      g.lineTo(this.width,0);
-      g.lineTo(this.width,this.height);
-      g.lineTo(0,this.height);
-      g.lineTo(0,0);
-      g.stroke();
+      // g.beginPath();
+      // g.moveTo(0,0);
+      // g.lineTo(this.width,0);
+      // g.lineTo(this.width,this.height);
+      // g.lineTo(0,this.height);
+      // g.lineTo(0,0);
+      // g.stroke();
+
+      g.lineWidth = 10 * Math.sin(time);
+      
+
+      g.fillStyle = "black"
+
+      g.fillRect(0, 0, this.width, this.height);
+
+
+      if (this.cursor.z == 1) {
+        colors = initColorsArray(numCurves);
+      }
+
+      sp = bgCurves;
+      var multiSplines = [];
+      for (var i = 0; i < sp.length; i++) {
+        multiSplines.push(new SPLINE.MultiSplineHermite(sp[i], SPLINE.getCurvesHermite));
+      }
+
+
+      var insigniaCurves = [
+              new SPLINE.MultiSplineHermite([
+                [
+                  [ -1 , 0,  0],
+                  [  -.5,  0, 0],
+                  [  0 , 0,  0],
+                  [  -.5,  -.375, 0],
+                  [0, -.75, 0]
+                ],
+                [
+                  [   0,   .1 * Math.sin(time * 2),  0],
+                  [   0,   .1 * Math.sin(time * 2),  0],
+                  [   -1,   0,  0],
+                  [   0,   0.025,  0],
+                  [   1, 0, 0]
+                ]
+              ], SPLINE.getCurvesHermite),
+
+              new SPLINE.MultiSplineHermite([
+                [
+                  [  -.5 , -.75,  .45],
+                  [  -.5,  0, 0],
+                  [  -.5, -.75, -.25],
+                ],
+                [
+                  [   0,   .0001,  -.5],
+                  [   0,   0,  0],
+                  [   0,   .0001,  .5]
+                ]
+              ], SPLINE.getCurvesHermite)
+      ];
 
       M.identity(m);
+         M.scale(m, 600 / this.width, 400 / this.height);
 
       M.save(m);
-         var s = .5 * Math.sin(time);
-         var P0 = [ [-.5,-.5, 0], [.5,  s, 0] ];
-         var P1 = [ [ .5,  s, 0], [.5,  0, 0] ];
-         var R0 = [ [  1,  0, 0], [ 1,  0, 0] ];
-         var R1 = [ [  1,  0, 0], [ 0, -1, 0] ];
 
-         var curves = [];
 
-         for (var n = 0 ; n < P0.length ; n++) {
-	    var X = M.transform(Hermite, [ P0[n][0], P1[n][0], R0[n][0], R1[n][0] ]),
-	        Y = M.transform(Hermite, [ P0[n][1], P1[n][1], R0[n][1], R1[n][1] ]),
-	        Z = M.transform(Hermite, [ P0[n][2], P1[n][2], R0[n][2], R1[n][2] ]);
 
-            var C = [];
-	    for (var t = 0 ; t < 1.001 ; t += 1/20)
-	       C.push([ cubic(X,t), cubic(Y,t), cubic(Z,t) ]);
+        M.rotateY(m, time);
+        M.rotateZ(m, time/2);
 
-            curves.push(C);
-         }
 
-         this.drawCurves(m, curves);
+        for (var i = 0; i < multiSplines.length; i++) {
+          var _rgb = colors[i];
+          var _r = _rgb._r;
+          var _g = _rgb._g;
+          var _b = _rgb._b;
+          g.strokeStyle = "rgb("+ _r + "," + _g + "," + _b + ")";
+
+          this.drawCurves(m, multiSplines[i].getCurves(multiSplines[i], 1 / 20));
+
+        }
 
       M.restore(m);
+
+      g.lineWidth = 10;
+      g.strokeStyle = "green";
+
+      M.rotateY(m, .2);
+          M.translate(m, [.5, .4, 0]);
+
+
+      iColors = ["blue", "orange", "blue"];
+
+      for (var i = 0; i < insigniaCurves.length; i++) {
+        g.strokeStyle = iColors[i];
+        var insigniaCurve = insigniaCurves[i];
+        this.drawCurves(m, insigniaCurve.getCurves(insigniaCurve, 1 / 20));
+      }
+
+
+      dynamizeRandomTest(bgCurves);
    }
 
    drawCanvases([canvas1]);
