@@ -5,11 +5,11 @@
 <td width=50></td>
 <td valign=top>
 <big><b>
-My KTR symbol with Hermite Curves,<br>
-Multiple Multi-Splines,<br>
-Randomly Generated,<br>
+My KTR symbol with splines,<br>
+(Hermite splines for the frame, a Bezier curve for the head and tail)<br>
+Background of multiple randomly-generated Hermite multi-splines<br>
 <br>
-Click window to change curve colors<br> 
+Click window to change curve colors and flip KTR symbol colors<br> 
 </b></big>
 </td>
 </tr>
@@ -34,13 +34,14 @@ Click window to change curve colors<br>
      return colors;
    }
 
-   var numCurves = getRandomNumber(2, 16);
+   var numCurves = getRandomNumber(2, 5);
    var m = [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0];
    var bgCurves = initRandomHermiteCurves(numCurves);
    var colors = initColorsArray(numCurves);
+   var iColors = ["orange", "blue"];
 
 
-
+   var firstClick = true;
    canvas1.update = function(g) {
    // var bgCurves = initInClassExample();
       g.lineCap = 'round';
@@ -58,7 +59,7 @@ Click window to change curve colors<br>
       // g.lineTo(0,0);
       // g.stroke();
 
-      g.lineWidth = 10 * Math.sin(time);
+      g.lineWidth = 1;
       
 
       g.fillStyle = "black"
@@ -66,8 +67,12 @@ Click window to change curve colors<br>
       g.fillRect(0, 0, this.width, this.height);
 
 
-      if (this.cursor.z == 1) {
+      if (this.cursor.z == 1 && firstClick) {
         colors = initColorsArray(numCurves);
+        iColors.push(iColors.shift());
+        firstClick = false;
+      } else if (this.cursor.z == 0) {
+        firstClick = true;
       }
 
       sp = bgCurves;
@@ -76,48 +81,58 @@ Click window to change curve colors<br>
         multiSplines.push(new SPLINE.MultiSplineHermite(sp[i], SPLINE.getCurvesHermite));
       }
 
-
+      
       var insigniaCurves = [
-              new SPLINE.MultiSplineHermite([
-                [
-                  [ -1 , 0,  0],
-                  [  -.5,  0, 0],
-                  [  0 , 0,  0],
-                  [  -.5,  -.375, 0],
-                  [0, -.75, 0]
-                ],
-                [
-                  [   0,   .1 * Math.sin(time * 2),  0],
-                  [   0,   .1 * Math.sin(time * 2),  0],
-                  [   -1,   0,  0],
-                  [   0,   0.025,  0],
-                  [   1, 0, 0]
-                ]
-              ], SPLINE.getCurvesHermite),
+              // new SPLINE.MultiSplineHermite([
+              //   [
+              //     [ -1 , 0,  0],
+              //     [  -.5,  0, 0],
+              //     [  0 , 0,  0],
+              //     [  -.5,  -.375, 0],
+              //     [0, -.75, 0]
+              //   ],
+              //   [
+              //     [   0,   .1 * Math.sin(time * 2),  0],
+              //     [   0,   .1 * Math.sin(time * 2),  0],
+              //     [   -1,   0,  0],
+              //     [   0,   0.025,  0],
+              //     [   1, 0, 0]
+              //   ]
+              // ], SPLINE.getCurvesHermite),
 
               new SPLINE.MultiSplineHermite([
                 [
                   [  -.5 , -.75,  .45],
-                  [  -.5,  0, 0],
-                  [  -.5, -.75, -.25],
+                  [  -.5,     0,       0],
+                  [  -.5,  -.75,  -.25],
                 ],
                 [
                   [   0,   .0001,  -.5],
-                  [   0,   0,  0],
-                  [   0,   .0001,  .5]
+                  [   0,   0,        0],
+                  [   0,   .0001,   .5]
                 ]
               ], SPLINE.getCurvesHermite)
       ];
+      
+      insigniaCurves.push(
+          new SPLINE.MultiSplineBezier([
+            [ -1 , 0,  0],
+            [  .4,  0, 0],
+            [  0 , 0,  0],
+            [  -.5,  -.375, .15],
+            [  -.5, -.375, -.5],
+            [ 0, -.75, 0],
+            [.0001, -.75, 0]
+
+          ], SPLINE.getCurvesBezier));
 
       M.identity(m);
          M.scale(m, 600 / this.width, 400 / this.height);
 
       M.save(m);
 
-
-
         M.rotateY(m, time);
-        M.rotateZ(m, time/2);
+        M.rotateZ(m, -time/2);
 
 
         for (var i = 0; i < multiSplines.length; i++) {
@@ -134,13 +149,10 @@ Click window to change curve colors<br>
       M.restore(m);
 
       g.lineWidth = 10;
-      g.strokeStyle = "green";
-
-      M.rotateY(m, .2);
+      M.rotateY(m, time / 2);
           M.translate(m, [.5, .4, 0]);
 
 
-      iColors = ["blue", "orange", "blue"];
 
       for (var i = 0; i < insigniaCurves.length; i++) {
         g.strokeStyle = iColors[i];
