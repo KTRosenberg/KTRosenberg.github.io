@@ -6,11 +6,15 @@
 <td width=50></td>
 <td valign=top>
 <big><b>
-Example of Bspline curve
+Extension of Bspline curve
 </b></big>
 <p>
-Some ways this could be extended:
 <ul>
+<li>Can use a Bspline as an animation path,<br>
+<li> move the points to change where the object moves, <br>
+<li> click indigo points to add control points
+<li>Can create multiple Bsplines
+
 <li>Click midpoint between two key points to insert a new key point.
 <li>Click on a key point to delete it.
 <li>Toggle between open and closed curve.
@@ -43,16 +47,34 @@ Some ways this could be extended:
 
    // Initial values for the key points.  The user can change them interactively.
  
+   var animationPath = new SPLINE.AnimationBSpline(
+    new SPLINE.BSpline([
+         [ -.6, -.5,  0],
+         [ -.2,  .5,  0],
+         [  .2, -.4,  0],
+         [  .6, -.2,  0],
+         [  .8, -.5,  0],
+       ], SPLINE.getCurveBSpline),
+       1 / 20
+    );
 
-   var bspline = new SPLINE.MultiSplineB([
-     [ -.6, -.5,  0],
-     [ -.2,  .5,  0],
-     [  .2, -.4,  0],
-     [  .6, -.2,  0],
-     [  .8, -.5,  0],
-   ], SPLINE.getCurvesMultiSplineB);
+   // var path = new SPLINE.animationBspline
 
-   var P = bspline.P;
+   var bspline = animationPath.spline;
+   var PList = [bspline.P];
+   var Mids = calcMids();
+
+function calcMids() {
+   var P_ = bspline.P;
+   var points = [];
+   for (n = 0 ; n < P_.length; n++) {
+     var n2 = (n + 1) % P_.length;
+     var midX = (P_[n][0] + P_[n2][0]) / 2;
+     var midY = (P_[n][1] + P_[n2][1]) / 2;
+     points.push([midX, midY, 0]);
+   }
+   return points;
+}        
 
    canvas1.update = function(g) {
       g.lineCap = 'round';
@@ -86,17 +108,48 @@ Some ways this could be extended:
 
 	 // When mouse is button is down, select a key point if cursor gets near it.
 
+
+         var updatedPath = false;
          if (this.cursor.z) {
-            if (this.n === undefined)
+            if (this.n === undefined) {
+               for (l = 0 ; l < PList.length; l++) {
+                var P = PList[l];
+                 for (n = 0 ; n < P.length ; n++) {
+                    let dx = P[n][0] - cx,
+                        dy = P[n][1] - cy;
+                    if (dx * dx + dy * dy < 0.05 * 0.05) {
+                       this.n = n;
+                       this.nP = P;
+                       break;
+                    }
+                 }
+               }
+
+               var P = Mids;
                for (n = 0 ; n < P.length ; n++) {
                   let dx = P[n][0] - cx,
                       dy = P[n][1] - cy;
                   if (dx * dx + dy * dy < 0.05 * 0.05) {
-                     this.n = n;
+                     if (n + 1 > P.length) {
+                         PList[0].push(P[n]);
+                     }
+                     else {
+                      PList[0].splice(n + 1, 0, P[n]);
+                     }
+
+                     animationPath.updatePath();
+                     Mids = calcMids();
+
+                     updatedPath = true;
+
                      break;
                   }
                }
-         }
+             }
+           }
+              
+            
+         
 
 	 // When mouse button is up, no key point is selected.
 
@@ -105,28 +158,68 @@ Some ways this could be extended:
 
          // If a key point is selected, move it to the cursor location.
 
+
+
          if (this.n !== undefined) {
-            P[this.n][0] = cx;
-            P[this.n][1] = cy;
+            this.nP[this.n][0] = cx;
+            this.nP[this.n][1] = cy;
+            if (!updatedPath) {
+              animationPath.updatePath();
+              Mids = calcMids();
+            }
          }
 
 	 // Draw the set of bsplines as a single filled curve.
 
          g.fillStyle = 'rgb(100,255,100)';
-         this.drawCurves(m, [ bspline.getCurves(bspline, 1 / 20) ], true); // Set isFill flag to true.
+         this.drawCurves(m, [ bspline.getCurve(bspline, 1 / 20) ], false); // Set isFill flag to false
+   // Draw the animated path
+        M.save(m);
+        var p = animationPath.getNextPoint(1);
+        M.translate(m, p);
+        M.rotateZ(m, 3 * time);
+        M.scale(m, 0.05);
+        this.drawCurves(m, S.parametricMesh(S.torus, 13, 13));
+        M.restore(m);
+
 
 	 // Draw the key points as small disks.
 
-         curves = [];
-         for (n = 0 ; n < P.length ; n++) {
-            curve = [];
-            for (t = 0 ; t < 2 * Math.PI ; t += 1/10)
-               curve.push([P[n][0] + .015 * Math.cos(t),
-                           P[n][1] + .015 * Math.sin(t), 0]);
-            curves.push(curve);
+
+        for (var l = 0; l < PList.length; l++) {
+           curves = [];
+           var P = PList[l];
+           for (n = 0 ; n < P.length ; n++) {
+              curve = [];
+              for (t = 0 ; t < 2 * Math.PI ; t += 1/10) {
+                 curve.push([P[n][0] + .015 * Math.cos(t),
+                             P[n][1] + .015 * Math.sin(t), 0]);
+               }
+              curves.push(curve);
+           }
+           g.fillStyle = 'blue';
+           this.drawCurves(m, curves, true);
          }
-         g.fillStyle = 'blue';
-         this.drawCurves(m, curves, true);
+
+   // Draw the mid-points as other small disks
+
+        for (var l = 0; l < PList.length; l++) {
+           curves = [];
+           var P = PList[l];
+           for (n = 0 ; n < P.length; n++) {
+              curve = [];
+              for (t = 0 ; t < 2 * Math.PI ; t += 1/10) {
+                 var n2 = (n + 1) % P.length;
+                 var midX = (P[n][0] + P[n2][0]) / 2;
+                 var midY = (P[n][1] + P[n2][1]) / 2;
+                 curve.push([midX + .013 * Math.cos(t),
+                             midY + .013 * Math.sin(t), 0]);
+               }
+              curves.push(curve);
+           }         
+           g.fillStyle = 'indigo';
+           this.drawCurves(m, curves, true);
+         }
 
 	 // Draw lines between successive key points.
 
@@ -138,11 +231,11 @@ Some ways this could be extended:
 
 	 // Draw the cursor as red crosshairs.
 
-         curves = [];
-         curves.push([ [cx-.1, cy], [cx+.1, cy] ]);
-         curves.push([ [cx, cy-.1], [cx, cy+.1] ]);
-         g.strokeStyle = 'red';
-         this.drawCurves(m, curves );
+         // curves = [];
+         // curves.push([ [cx-.1, cy], [cx+.1, cy] ]);
+         // curves.push([ [cx, cy-.1], [cx, cy+.1] ]);
+         // g.strokeStyle = 'red';
+         // this.drawCurves(m, curves );
 
       M.restore(m);
    }

@@ -70,7 +70,7 @@ var SPLINE = (function(){
    }
    _SPLINE.getCurvesBezier = getCurvesBezier;
 
-   function getCurvesMultiSplineB(multiSpline, granularity) {
+   function getCurveBSpline(multiSpline, granularity) {
       if (granularity === undefined) {
          granularity = 1 / 20;
       }
@@ -91,7 +91,7 @@ var SPLINE = (function(){
          }
       return curve;
    }
-   _SPLINE.getCurvesMultiSplineB = getCurvesMultiSplineB;
+   _SPLINE.getCurveBSpline = getCurveBSpline;
 
 
    function MultiSplineHermite(curveData, getCurvesProcedure) {
@@ -120,11 +120,26 @@ var SPLINE = (function(){
    }
    _SPLINE.MultiSplineBezier = MultiSplineBezier;
 
-   function MultiSplineB(curveData, getCurvesProcedure) {
+   function BSpline(curveData, getCurveProcedure) {
        this.P = curveData;
-       this.getCurves = getCurvesProcedure;
+       this.getCurve = getCurveProcedure;
    }
-   _SPLINE.MultiSplineB = MultiSplineB;
+   _SPLINE.BSpline = BSpline;
+
+   function AnimationBSpline(spline, granularity) {
+      this.spline = spline;
+      this.curve = spline.getCurve(spline, granularity);
+      this.updatePath = function() {
+         this.curve = spline.getCurve(spline, granularity);
+      };
+      this.pointIndex = 0;
+      this.getNextPoint = function(rate) {
+         var point = this.curve[this.pointIndex];
+         this.pointIndex = (this.pointIndex + rate + this.curve.length) % this.curve.length;
+         return point;
+      };
+   }
+   _SPLINE.AnimationBSpline = AnimationBSpline;
 
    return _SPLINE;
 
