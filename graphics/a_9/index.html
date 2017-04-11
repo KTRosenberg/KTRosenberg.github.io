@@ -14,6 +14,7 @@ Extension of Bspline curve
 move the points to change where the object moves,<br>
 <li>Click indigo points to add control points<br>
 <li>Can create multiple Bsplines (in code)
+<li> Note: press spacebar to toggle guide curves and points on and off
 
 <!--
 
@@ -38,6 +39,26 @@ move the points to change where the object moves,<br>
 <script src=S.js></script>
 <script src=SP.js></script>
 <script>
+
+   var showGuides = true;
+   var spaceAlreadyDown = false;
+
+   window.addEventListener('keydown', keyDownHandler, false);
+   window.addEventListener('keyup', keyUpHandler, false);
+
+   function keyDownHandler(event) {
+      if (event.keyCode == 32 && !spaceAlreadyDown) {
+        showGuides = !showGuides;
+        spaceAlreadyDown = true;
+      }
+   }
+
+   function keyUpHandler(event) {
+     if (event.keyCode == 32) {
+       spaceAlreadyDown = false;
+     }
+   }
+
    var m = [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0];
 
    // Matrix that transforms from [P0,P1,P2,P3] values to cubic coefficients [a,b,c,d].
@@ -185,7 +206,7 @@ function calcMids() {
         this.drawCurves(m, S.parametricMesh(S.torus, 13, 13));
         M.restore(m);
 
-
+   if (showGuides) {
 	 // Draw the key points as small disks.
 
 
@@ -226,7 +247,7 @@ function calcMids() {
 
 	 // Draw lines between successive key points.
 
-	 curves = [];
+	    curves = [];
          for (n = 0 ; n < P.length ; n++)
 	    curves.push([ P[n], P[(n+1) % P.length] ]);
          g.strokeStyle = 'blue';
@@ -239,6 +260,7 @@ function calcMids() {
          // curves.push([ [cx, cy-.1], [cx, cy+.1] ]);
          // g.strokeStyle = 'red';
          // this.drawCurves(m, curves );
+      }
 
       M.restore(m);
    }
