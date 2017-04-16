@@ -1,4 +1,5 @@
 <script src=M.js></script>
+<script src=S.js></script>
 <script src=lib2g.js></script>
 
 <body bgcolor=black text=white>
@@ -44,51 +45,129 @@ var vs = vs_script.innerHTML, fs = fs_script.innerHTML;
 
 addTextEditor(fs, function() { canvas1.setShaders(vs, this.value); });
 
-var obj1, obj2;
+// var obj1, obj2;
+
+// gl_start(canvas1, vs, fs,
+//    function(time) {
+//       M.identity(m);
+//       M.rotateY(m, time);
+
+//       M.save(m);
+//          obj1.setMatrix(m);
+//       M.restore(m);
+
+//       M.save(m);
+//          M.rotateX(m, .5);
+//          obj2.setMatrix(m);
+//       M.restore(m);
+//    }
+// );
+//    var scene = new Scene();
+
+//    obj1 = new SceneObject();
+//    obj1.setVertices([
+//       -.3,-.3, 0,  0,0,1,
+//        .3,-.3, 0,  0,0,1,
+//        .3, .3, 0,  0,0,1,
+
+//        .3, .3, 0,  0,0,1,
+//       -.3, .3, 0,  0,0,1,
+//       -.3,-.3, 0,  0,0,1,
+//    ]);
+//    scene.addObject(obj1);
+
+//    obj2 = new SceneObject();
+//    obj2.setVertices([
+//       -.2,-.2,-.3,  -1.5,0,1,
+//        .4,-.2, .3,  -0.5,0,1,
+//        .4, .4, .3,  -0.5,0,1,
+
+//        .4, .4, .3,  -0.5,0,1,
+//       -.2, .4,-.3,  -1.5,0,1,
+//       -.2,-.2,-.3,  -1.5,0,1,
+//    ]);
+//    scene.addObject(obj2);
+
+//    canvas1.scene = scene;
+
+var objA = null;
+
+function ParamQuadsToTriangles(type, u, v) {
+  var quads = S.parametricMesh(type, u, v);
+  var vertices = [];
+  function extractPointToVertices(vertices, point) {
+    for (var c = 0; c < 3; c++) {
+      vertices.push(point[c]);
+    }
+    // vertices.push(0);
+    // vertices.push(0);
+    // vertices.push(1);
+    vertices.push(point[0]);
+    vertices.push(point[1]);
+    vertices.push(point[2]);
+  }
+
+  for (var q = 0; q < quads.length; q++) {
+    var quad = quads[q];
+    // triangle 1
+    extractPointToVertices(vertices, quad[0]);
+    extractPointToVertices(vertices, quad[1]);
+    extractPointToVertices(vertices, quad[2]);
+
+    // triangle 2
+    extractPointToVertices(vertices, quad[2]);
+    extractPointToVertices(vertices, quad[3]);
+    extractPointToVertices(vertices, quad[0]);
+  }
+  return vertices;
+}
+
+var vertices = ParamQuadsToTriangles(S.torus, 10, 10);
 
 gl_start(canvas1, vs, fs,
    function(time) {
       M.identity(m);
-      M.rotateY(m, time);
 
       M.save(m);
-         obj1.setMatrix(m);
-      M.restore(m);
-
-      M.save(m);
-         M.rotateX(m, .5);
-         obj2.setMatrix(m);
+      M.rotateX(m, time);
+      M.scale(m, .5);
+      objA.setMatrix(m);
       M.restore(m);
    }
 );
-   var scene = new Scene();
 
-   obj1 = new SceneObject();
-   obj1.setVertices([
-      -.3,-.3, 0,  0,0,1,
-       .3,-.3, 0,  0,0,1,
-       .3, .3, 0,  0,0,1,
+var scene = new Scene();
 
-       .3, .3, 0,  0,0,1,
-      -.3, .3, 0,  0,0,1,
-      -.3,-.3, 0,  0,0,1,
-   ]);
-   scene.addObject(obj1);
+// objA = new SceneObject();
+// objA.setVertices([
+//   q[0][0], q[0][1], q[0][2], 0,0,1,
+//   q[1][0], q[1][1], q[1][2], 0,0,1,
+//   q[2][0], q[2][1], q[2][2], 0,0,1,
 
-   obj2 = new SceneObject();
-   obj2.setVertices([
-      -.2,-.2,-.3,  -1.5,0,1,
-       .4,-.2, .3,  -0.5,0,1,
-       .4, .4, .3,  -0.5,0,1,
+//   q[2][0], q[2][1], q[2][2], 0,0,1,
+//   q[3][0], q[3][1], q[3][2], 0,0,1,
+//   q[0][0], q[0][1], q[0][2], 0,0,1
 
-       .4, .4, .3,  -0.5,0,1,
-      -.2, .4,-.3,  -1.5,0,1,
-      -.2,-.2,-.3,  -1.5,0,1,
-   ]);
-   scene.addObject(obj2);
+// ]);
+// scene.addObject(objA);
+// var subarr = [];
+// for (var i = 0, j = 0; i < vertices.length; i++) {
+//   subarr.push(vertices[i]);
+//   if (j == 5) {
+//     console.log(subarr);
+//     subarr = [];
+//     j = 0;
+//   } else {
+//     j++;
+//   }
+// }
+// console.log("____________________________________");
+// console.log(vertices.length % 3 == 0);
 
-   canvas1.scene = scene;
-
+objA = new SceneObject();
+objA.setVertices(vertices);
+scene.addObject(objA);
+canvas1.scene = scene;
 
 </script>
 
