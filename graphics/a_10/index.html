@@ -1,5 +1,6 @@
 <script src=M.js></script>
 <script src=S.js></script>
+<script src=SP.js></script>
 <script src=lib2g.js></script>
 
 <body bgcolor=black text=white>
@@ -33,20 +34,14 @@
 varying vec3 vPos, vNor;
 uniform float uTime;
 
-vec3 LDir = normalize(vec3(sin(uTime),0.,-.5));
+vec3 bg_col = vec3(0., 0., 0.);
 
-// float calc_brightness(vec3 N)
-// {
-//     float brightness  = (BRIGHT_1) ? max(0., dot(N, LDir)) : 0.;
-//     float brightness2 = (BRIGHT_2) ? max(0., dot(N, LDir2)) : 0.;
-//     float brightness3 = (BRIGHT_3) ? max(0., dot(N, LDir3)) : 0.;
-//     return (mix(.1, brightness + brightness2 + brightness3, .5));
-// }
+vec3 LDir = normalize(vec3(sin(uTime),0.,-.5));
 
 // phong shading algorithm from previous assignments
 vec3 phong(vec3 N, vec3 E, vec3 A, vec3 D, vec4 S)
 {
-   vec3 c = A; // ambient color
+   vec3 c = A * bg_col; // ambient color
    vec3 LDir = normalize(LDir); 
    float d = max(0., dot(N, LDir)); // diffuse value
    vec3 R = 2. * dot(N, LDir) * N - LDir; // reflection direction
@@ -57,13 +52,15 @@ vec3 phong(vec3 N, vec3 E, vec3 A, vec3 D, vec4 S)
 
 void main() {
    vec3 normal = normalize(vNor);
-   vec3 c;
-   vec3 W = normalize(vec3(0., 0., 1.)); // Ray direction, but not using rays here... hmm
+   vec3 E = normalize(vec3(0., 0., -1.));
    
-   vec3 E = -W; // ???
-   c = phong(normal, E, vec3(.01,.1,.01),
-             vec3(.05,.5,.05),
-             vec4(.5,.5,.5,10.));
+   vec3 c = phong(
+      normal, 
+      E,
+      vec3(0.01, 0.2, 1.0),
+      vec3(226. / 255., 88. / 255., 34. / 255.),
+      vec4(.5,.5,.5,10.)
+   );
 
    gl_FragColor = vec4(sqrt(c), 1.);
 }
@@ -78,164 +75,32 @@ var vs = vs_script.innerHTML, fs = fs_script.innerHTML;
 
 addTextEditor(fs, function() { canvas1.setShaders(vs, this.value); });
 
-// var obj1, obj2;
 
-// gl_start(canvas1, vs, fs,
-//    function(time) {
-//       M.identity(m);
-//       M.rotateY(m, time);
+/////////////////////////////////////////////////////
 
-//       M.save(m);
-//          obj1.setMatrix(m);
-//       M.restore(m);
+function calcNormal(p1, p2, p3) {
+  function subtractPoints(p1, p2) {
+    return [
+      p1[0] - p2[0], 
+      p1[1] - p2[1],
+      p1[2] - p2[2]
+    ];
+  }
+  // calculate surface normal
+  var U = subtractPoints(p2, p1);
+  var V = subtractPoints(p3, p1);
+  // cross product
+  var Nx = (U[1] * V[2]) - (U[2] * V[1]);
+  var Ny = (U[2] * V[0]) - (U[0] * V[2]);
+  var Nz = (U[0] * V[1]) - (U[1] * V[0]); 
 
-//       M.save(m);
-//          M.rotateX(m, .5);
-//          obj2.setMatrix(m);
-//       M.restore(m);
-//    }
-// );
-//    var scene = new Scene();
+  // var len = Math.sqrt((Nx * Nx) + (Ny * Ny) + (Nz * Nz));
+  // // Nx /= len;
+  // // Ny /= len;
+  // // Nz /= len;
 
-//    obj1 = new SceneObject();
-//    obj1.setVertices([
-//       -.3,-.3, 0,  0,0,1,
-//        .3,-.3, 0,  0,0,1,
-//        .3, .3, 0,  0,0,1,
-
-//        .3, .3, 0,  0,0,1,
-//       -.3, .3, 0,  0,0,1,
-//       -.3,-.3, 0,  0,0,1,
-//    ]);
-//    scene.addObject(obj1);
-
-//    obj2 = new SceneObject();
-//    obj2.setVertices([
-//       -.2,-.2,-.3,  -1.5,0,1,
-//        .4,-.2, .3,  -0.5,0,1,
-//        .4, .4, .3,  -0.5,0,1,
-
-//        .4, .4, .3,  -0.5,0,1,
-//       -.2, .4,-.3,  -1.5,0,1,
-//       -.2,-.2,-.3,  -1.5,0,1,
-//    ]);
-//    scene.addObject(obj2);
-
-//    canvas1.scene = scene;
-
-// var objA = null;
-// //var objKTR = null;
-
-// function ParamQuadsToTriangles(type, u, v) {
-//   var quads = S.parametricMesh(type, u, v);
-//   var vertices = [];
-//   function extractPointToVertices(vertices, point) {
-//     for (var c = 0; c < 3; c++) {
-//       vertices.push(point[c]);
-//     }
-//     vertices.push(0);
-//     vertices.push(0);
-//     vertices.push(0);
-//     // vertices.push(point[0]);
-//     // vertices.push(point[1]);
-//     // vertices.push(point[2]);
-//     // vertices.push(0);
-//     // vertices.push(1);
-//     // vertices.push(2);
-//   }
-
-
-//   function calcAndSetNormal(vertices) {
-
-//     function subtractPoints(p1, p2) {
-//       return [
-//         p1[0] - p2[0], 
-//         p1[1] - p2[1],
-//         p1[1] - p2[1]
-//       ];
-//     }
-
-//     var i = vertices.length - 18;
-//     var p1 = [vertices[i], vertices[i + 1], vertices[i + 2]];
-//     i += 6;
-//     var p2 = [vertices[i], vertices[i + 1], vertices[i + 2]];
-//     i += 6;
-//     var p3 = [vertices[i], vertices[i + 1], vertices[i + 2]];
-//     i = vertices.length - 18 + 3;
-
-//     // https://www.khronos.org/opengl/wiki/Calculating_a_Surface_Normal
-//     // calculate surface normal
-//     var U = subtractPoints(p2, p1);
-//     var V = subtractPoints(p3, p1);
-//     // cross product
-//     var Nx = (U[1] * V[2]) - (U[2] * V[1]);
-//     var Ny = (U[2] * V[0]) - (U[0] * V[2]);
-//     var Nz = (U[0] * V[1]) - (U[1] * V[0]);
-
-//     // Nx = Math.random();
-//     // Ny = Math.random();
-//     // Nz = Math.random();
-
-
-//     //var len = Math.sqrt((Nx * Nx) + (Ny * Ny) + (Nz * Nz));
-
-
-//     // "poke-in" calculated surface normals (THESE ARE NOT CORRECT FOR THE "SMOOTH" MESH, UNFORTUNATELY)
-//     vertices[i] = Nx;
-//     vertices[i + 1] = Ny;
-//     vertices[i + 2] = Nz;
-//     i += 6;
-//     vertices[i] = Nx;
-//     vertices[i + 1] = Ny;
-//     vertices[i + 2] = Nz;
-//     i += 6;
-//     vertices[i] = Nx;
-//     vertices[i + 1] = Ny;
-//     vertices[i + 2] = Nz;
-//     // vertices[i] = p1[0];
-//     // vertices[i + 1] = p1[1];
-//     // vertices[i + 2] = p1[2];
-//     // i += 6;
-//     // vertices[i] = p2[0];
-//     // vertices[i + 1] = p2[1];
-//     // vertices[i + 2] = p2[2];
-//     // i += 6;
-//     // vertices[i] = p3[0];
-//     // vertices[i + 1] = p3[1];
-//     // vertices[i + 2] = p3[2];
-
-//   }
-
-//   for (var q = 0; q < quads.length; q++) {
-//     var quad = quads[q];
-//     // triangle 1
-//     extractPointToVertices(vertices, quad[0]);
-//     extractPointToVertices(vertices, quad[1]);
-//     extractPointToVertices(vertices, quad[2]);
-
-//     calcAndSetNormal(vertices);
-
-//     // triangle 2
-//     extractPointToVertices(vertices, quad[2]);
-//     extractPointToVertices(vertices, quad[3]);
-//     extractPointToVertices(vertices, quad[0]);
-
-//     calcAndSetNormal(vertices);
-//   }
-//   return vertices;
-// }
-
-// function Triangle() {
-//   this.x1
-//   this.y1
-//   this.z1
-//   this.x2
-//   this.y2
-//   this.z2
-//   this.x3
-//   this.y3
-//   this.z3
-// }
+  return [Nx, Ny, Nz];
+}
 
 function getTriangleVertexInfoFromParamQuads(quads) {
   var triangles = [];
@@ -264,29 +129,6 @@ function getTriangleVertexInfoFromParamQuads(quads) {
 
   // pass 2: set normals
   function setTriangleNormals() {
-    function calcNormal(p1, p2, p3) {
-      function subtractPoints(p1, p2) {
-        return [
-          p1[0] - p2[0], 
-          p1[1] - p2[1],
-          p1[2] - p2[2]
-        ];
-      }
-      // calculate surface normal
-      var U = subtractPoints(p2, p1);
-      var V = subtractPoints(p3, p1);
-      // cross product
-      var Nx = (U[1] * V[2]) - (U[2] * V[1]);
-      var Ny = (U[2] * V[0]) - (U[0] * V[2]);
-      var Nz = (U[0] * V[1]) - (U[1] * V[0]); 
-
-      // var len = Math.sqrt((Nx * Nx) + (Ny * Ny) + (Nz * Nz));
-      // // Nx /= len;
-      // // Ny /= len;
-      // // Nz /= len;
-
-      return [Nx, Ny, Nz];     
-    }
 
     for (var tri = 0; tri < triangles.length; tri += 18) {
       var offset = 0;
@@ -324,89 +166,185 @@ function getTriangleVertexInfoFromParamQuads(quads) {
   return triangles; 
 }
 
-var quads = S.parametricMesh(S.sphere, 100, 100);
-var vertices = getTriangleVertexInfoFromParamQuads(quads);
-
 gl_start(canvas1, vs, fs,
    function(time) {
       M.identity(m);
 
-      M.save(m);
-      //M.rotateX(m, Math.PI / 2);
-      // M.rotateX(m, time);
-      // M.rotateY(m, time);
-     // M.translate(m, [.5 * Math.sin(time), 0., -2.]);
-      M.rotateX(m, Math.sin(time));
-      M.scale(m, .3);
+      // M.save(m);
 
-      objA.setMatrix(m);
+      // // M.translate(m, [0, 0, 1]);
+      // // bg.setMatrix(m);
+
+      // M.restore(m);
+
+      // strange moon
+      M.save(m);
+        //M.translate(m, [.5, .5, 0.]);
+        M.translate(m, animationPath.getNextPoint(1));
+        M.scale(m, .15);
+        objA.setMatrix(m);
+      M.restore(m);
+
+      var factor = .5;
+      // columns
+      M.save(m);
+        //M.scale(m, .5, .5, .5);
+        M.rotateX(m, Math.PI / 2 - (Math.PI / 8));
+        M.rotateZ(m, -time);
+        M.scale(m, .75 * factor, .75 * factor, .75 * factor);
+        // M.rotateZ(m, time);
+
+        var offsetX = 0;
+        // row 1
+        M.save(m);
+
+          M.translate(m, [offsetX - 1, 0, 0]);
+          M.scale(m, .1, .1, .5);
+
+          column1.setMatrix(m);
+        M.restore(m);
+        M.save(m);
+
+          M.translate(m, [offsetX, 0, 0]);
+          M.scale(m, .1, .1, .5);
+
+          column2.setMatrix(m);
+        M.restore(m);
+        M.save(m);
+
+          M.translate(m, [offsetX + 1, 0, 0]);
+          M.scale(m, .1, .1, .5);
+
+          column3.setMatrix(m);
+        M.restore(m);
+        // row 2
+        var offset = 1;
+        M.save(m);
+
+          M.translate(m, [offsetX - 1, offset, 0]);
+          M.scale(m, .1, .1, .5);
+
+          column4.setMatrix(m);
+        M.restore(m);
+        M.save(m);
+
+          M.translate(m, [offsetX, offset, 0]);
+          M.scale(m, .1, .1, .5);
+
+          column5.setMatrix(m);
+        M.restore(m);
+        M.save(m);
+
+          M.translate(m, [offsetX + 1, offset, 0]);
+          M.scale(m, .1, .1, .5);
+
+          column6.setMatrix(m);
+        M.restore(m);
+      M.restore(m)
+
+      // roof
+      M.save(m);
+        
+        M.rotateX(m, -(Math.PI / 8));
+        M.rotateY(m, time);
+
+        M.scale(m, .9 * factor, .75 * factor, .9 * factor);
+        M.translate(m, [0, .5, -.1]);
+        roof.setMatrix(m);
       M.restore(m);
    }
 );
 
 var scene = new Scene();
+vertices = null;
+
+var animationPath = new SPLINE.AnimationBSpline(
+  new SPLINE.BSpline([
+       [ 0, .75,  0],
+       [ -1,  .75,  1],
+       [  0, .75,  0],
+       [  1, .75,  -1],
+       [  1, .75,  1],
+     ], SPLINE.getCurveBSpline),
+     1 / 20
+);
 
 var objA = new SceneObject();
-// console.log(vertices.splice(0, 18));
+vertices = getTriangleVertexInfoFromParamQuads(S.parametricMesh(S.sphere, 100, 100));
 objA.setVertices(vertices);
 scene.addObject(objA);
 
-// original:
-// gl_start(canvas1, vs, fs,
-//    function(time) {
-//       M.identity(m);
-//       M.rotateY(m, time);
+// var bg = new SceneObject;
+// bg.setVertices([
+//   -1, 1,0,  0,0,-1,
+//   -1,-1,0,  0,0,-1,
+//    1,-1,0,  0,0,-1,
 
-//       M.save(m);
-//          obj1.setMatrix(m);
-//       M.restore(m);
+//    1,-1,0,  0,0,-1,
+//    1, 1,0,  0,0,-1,
+//   -1, 1,0,  0,0,-1
 
-//       M.save(m);
-//          M.rotateX(m, .5);
-//          obj2.setMatrix(m);
-//       M.restore(m);
-//    }
-// );
-
-//  var obj1 = new SceneObject();
-//  obj1.setVertices([
-//     -.3,-.3, 0,  0,0,1,
-//      .3,-.3, 0,  0,0,1,
-//      .3, .3, 0,  0,0,1,
-
-//      .3, .3, 0,  0,0,1,
-//     -.3, .3, 0,  0,0,1,
-//     -.3,-.3, 0,  0,0,1,
-
-//     -.3,-.3, 0,  0,0,-1,
-//      .3,-.3, 0,  0,0,-1,
-//      .3, .3, 0,  0,0,-1,
-
-//      .3, .3, 0,  0,0,-1,
-//     -.3, .3, 0,  0,0,-1,
-//     -.3,-.3, 0,  0,0,-1,
-//  ]);
-//  scene.addObject(obj1);
-
-// var obj2 = new SceneObject();
-// obj2.setVertices([
-//   -.2,-.2,-.3,  -1.5,0,-1,
-//    .4,-.2, .3,  -0.5,0,-1,
-//    .4, .4, .3,  -0.5,0,-1,
-
-//    .4, .4, .3,  -0.5,0,-1,
-//   -.2, .4,-.3,  -1.5,0,-1,
-//   -.2,-.2,-.3,  -1.5,0,-1,
-
-//   -.2,-.2,-.3,  -1.5,0,-1,
-//    .4,-.2, .3,  -0.5,0,-1,
-//    .4, .4, .3,  -0.5,0,-1,
-
-//    .4, .4, .3,  -0.5,0,-1,
-//   -.2, .4,-.3,  -1.5,0,-1,
-//   -.2,-.2,-.3,  -1.5,0,-1,
 // ]);
-// scene.addObject(obj2);
+// scene.addObject(bg);
+
+
+// columns
+
+var column1 = new SceneObject();
+column1.setVertices(getTriangleVertexInfoFromParamQuads(S.parametricMesh(S.tube, 100, 100)));
+scene.addObject(column1);
+
+var column2 = new SceneObject();
+column2.setVertices(getTriangleVertexInfoFromParamQuads(S.parametricMesh(S.tube, 100, 100)));
+scene.addObject(column2);
+
+var column3 = new SceneObject();
+column3.setVertices(getTriangleVertexInfoFromParamQuads(S.parametricMesh(S.tube, 100, 100)));
+scene.addObject(column3);
+
+var column4 = new SceneObject();
+column4.setVertices(getTriangleVertexInfoFromParamQuads(S.parametricMesh(S.tube, 100, 100)));
+scene.addObject(column4);
+
+var column5 = new SceneObject();
+column5.setVertices(getTriangleVertexInfoFromParamQuads(S.parametricMesh(S.tube, 100, 100)));
+scene.addObject(column5);
+
+var column6 = new SceneObject();
+column6.setVertices(getTriangleVertexInfoFromParamQuads(S.parametricMesh(S.tube, 100, 100)));
+scene.addObject(column6);
+
+var roof = new SceneObject();
+var sideRoofN = calcNormal([-1, 0, 0], [-1, 0, 1], [0, .5, 0]);
+roof.setVertices([
+  -1, 0, 0,  0,0,-1,
+   1, 0, 0,  0,0,-1,
+   0,.5, 0,  0,0,-1,
+
+  -1, 0, 1,  0,0,1,
+   1, 0, 1,  0,0,1,
+   0,.5, 1,  0,0,1,
+
+   // side parts
+
+   -1, 0, 0, sideRoofN[0],sideRoofN[1],sideRoofN[2],
+   -1, 0, 1, sideRoofN[0],sideRoofN[1],sideRoofN[2],
+    0,.5, 0, sideRoofN[0],sideRoofN[1],sideRoofN[2],
+
+    0,.5, 0, sideRoofN[0],sideRoofN[1],sideRoofN[2],
+    0,.5, 1, sideRoofN[0],sideRoofN[1],sideRoofN[2],
+   -1, 0, 1, sideRoofN[0],sideRoofN[1],sideRoofN[2],
+
+    1, 0, 0, -sideRoofN[0],sideRoofN[1],sideRoofN[2],
+    1, 0, 1, -sideRoofN[0],sideRoofN[1],sideRoofN[2],
+    0,.5, 0, -sideRoofN[0],sideRoofN[1],sideRoofN[2],
+
+    0,.5, 0, -sideRoofN[0],sideRoofN[1],sideRoofN[2],
+    0,.5, 1, -sideRoofN[0],sideRoofN[1],sideRoofN[2],
+    1, 0, 1, -sideRoofN[0],sideRoofN[1],sideRoofN[2]
+
+]);
+scene.addObject(roof);
 
 canvas1.scene = scene;
 
