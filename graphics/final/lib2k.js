@@ -88,8 +88,8 @@ function Material(vs, fs) {
          }
 
          for (var i = 0 ; i < uLights.length; i++) {
-            var d = [Math.sin(time),0.,-.5];
-            var c = [1.0, 1.0, 1.0];
+            var d = [Math.sin(time),0.,.5];
+            var c = [(Math.sin(time) + 1)/2, (Math.sin(time + .1) + 1)/2, (Math.sin(time + .1) + 1)/2];
             gl.uniform3f(uLights[i].direction, d[0], d[1], d[2]);
             gl.uniform3f(uLights[i].color, c[0], c[1], c[2]);
          }

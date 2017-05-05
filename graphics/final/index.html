@@ -125,7 +125,7 @@ vec3 phong(vec3 N, vec3 E, vec3 A, vec3 D, vec4 S)\n\
    for (int i = 0; i < NLIGHTS; i++) {\n\
       vec3 LDir = normalize(uLights[i].direction); \n\
       float d = max(0., dot(N, LDir)); // diffuse value\n\
-      vec3 R = reflect(-LDir, N); // reflection direction\n\
+      vec3 R = reflect(LDir, N); // reflection direction\n\
       float s = pow(max(0., dot(E, R)), S.a); // specular value\n\
       c += uLights[i].color * (d * D + s * S.rgb * .1 * S.a);\n\
    }\n\
