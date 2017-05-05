@@ -89,7 +89,8 @@ function Material(vs, fs) {
 
          for (var i = 0 ; i < uLights.length; i++) {
             var d = [Math.sin(time),0.,.5];
-            var c = [(Math.sin(time) + 1)/2, (Math.sin(time + .1) + 1)/2, (Math.sin(time + .1) + 1)/2];
+            d = [0, 0, 1];
+            var c = [.2, .2, .2];
             gl.uniform3f(uLights[i].direction, d[0], d[1], d[2]);
             gl.uniform3f(uLights[i].color, c[0], c[1], c[2]);
          }
@@ -125,6 +126,23 @@ function SceneObject(vertices) {
       this.material.bindVertexAttribute('aPos', 3, gl.FLOAT, 8, 0);
       this.material.bindVertexAttribute('aNor', 3, gl.FLOAT, 8, 3);
       this.material.bindVertexAttribute('aUV' , 2, gl.FLOAT, 8, 6);
+   },
+
+   this.translateTexture = function(amountU, amountV) {
+      if (this.vertexData === undefined) {
+         return;
+      }
+      let v_ = this.vertexData;
+      let len = this.vertexData.length;
+      let  ufloat = new Float32Array(1);
+      let  vfloat = new Float32Array(1);
+      for (var i = 0; i < len; i += 8) { 
+         ufloat[0] = (1.0 + amountU) % 1.0;
+         vfloat[0] = (1.0 + amountV) % 1.0;
+         v_[i + 6] += ufloat[0];
+         v_[i + 7] += vfloat[0];
+      }
+
    }
 }
 
@@ -137,6 +155,14 @@ function Scene() {
 }
 
 var time = 0;
+
+var PROJECTION = (function() {
+   var p = {
+      near : 0.01,
+      far : 10.0
+   };
+   return p;
+}());
 
 function gl_start(canvas, update) {           // START WEBGL RUNNING IN A CANVAS
    try { 
@@ -176,11 +202,17 @@ function gl_start(canvas, update) {           // START WEBGL RUNNING IN A CANVAS
 
             let renderMatrix = M.identityMatrix();
 
-            var n_ =  0.01;
-            var f_ = 1. + time;
+            var n_ =  PROJECTION.near;
+            var f_ = PROJECTION.far + time;
 
             // PERSPECTIVE DONE HERE
-            M.matrixMultiply([1,0,0,0, 0,1,0,0, 0,0, -2 / (f_ - n_), -(f_ + n_) / (f_ - n_), 0,0,0,1], obj.matrix, renderMatrix);
+            M.matrixMultiply([
+               1,0,0,0, 
+               0,1,0,0, 
+               0,0, -2 / (f_ - n_), -(f_ + n_) / (f_ - n_), 
+               0,0,0,1
+            ]
+            , obj.matrix, renderMatrix);
             gl.uniformMatrix4fv(matrixAddr, false, renderMatrix);
 
             let invMatrixAddr = gl.getUniformLocation(program, 'invMatrix');
