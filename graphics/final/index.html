@@ -1,6 +1,8 @@
+<script src=perlin_noise_shader.js></script>
 <script src=M.js></script>
 <script src=lib2k.js></script>
 <script src=SHAPE.js></script>
+
 
 <body bgcolor=black text=white>
 <center>
@@ -8,27 +10,38 @@
 </center>
 </body>
    
+
+<script id="vs" type="notjs">
+attribute vec3 aPos, aNor;
+attribute vec2 aUV;
+varying   vec3 vPos, vNor;
+varying   vec2 vUV;
+uniform   mat4 matrix, invMatrix;
+void main() {
+   vec4 pos = matrix * vec4(aPos, 1.);
+   vec4 nor = vec4(aNor, 0.) * invMatrix;
+   gl_Position = pos;
+   vPos = pos.xyz;
+   vNor = nor.xyz;
+   vUV  = aUV;
+}
+</script>
+
+<script id="fs_1" type>
+</script>
+
+<script id="light_struct" type="notjs">
+struct Light {
+   vec3 direction;
+   vec3 color;
+};
+uniform Light uLights[NLIGHTS];
+</script>
+
 <script>
 
-var vs = '\
-attribute vec3 aPos, aNor;\n\
-attribute vec2 aUV;\n\
-varying   vec3 vPos, vNor;\n\
-varying   vec2 vUV;\n\
-uniform   mat4 matrix, invMatrix;\n\
-void main() {\n\
-   vec4 pos = matrix * vec4(aPos, 1.);\n\
-   vec4 nor = vec4(aNor, 0.) * invMatrix;\n\
-   gl_Position = pos;\n\
-   vPos = pos.xyz;\n\
-   vNor = nor.xyz;\n\
-   vUV  = aUV;\n\
-}\n\
-';
 
 var fs1 = '\
-varying vec3 vPos, vNor;\n\
-varying vec2 vUV;\n\
 void main() {\n\
    vec3 normal = normalize(vNor);\n\
    vec3 c = vec3(.1,.1,.1);\n\
@@ -39,9 +52,6 @@ void main() {\n\
 ';
 
 var fs2 = '\
-varying vec3 vPos, vNor;\n\
-varying vec2 vUV;\n\
-uniform sampler2D uSampler;\n\
 void main() {\n\
    vec3 normal = normalize(vNor);\n\
    vec3 c = vec3(.1,.1,.1);\n\
@@ -49,55 +59,169 @@ void main() {\n\
    c += vec3(.5,.3,.1) * max(0.,dot(normal, vec3(-.7,-.7,-.7)));\n\
    vec4 texture = texture2D(uSampler, vUV);\n\
    c *= texture.rgb;\n\
+   //c = vNor;\n\
    gl_FragColor = vec4(sqrt(c), 1.);\n\
 }\n\
 ';
+
+var fs3 = '\
+void main() {\n\
+   vec3 c = phong(\n\
+      normalize(vNor), \n\
+      E,\n\
+      vec3(0.01, 0.2, 1.0),\n\
+      vec3(226. / 255., 88. / 255., 34. / 255.),\n\
+      vec4(.5,.5,.5,10.)\n\
+   );\n\
+   vec4 texture = texture2D(uSampler, vUV);\n\
+   c *= texture.rgb;\n\
+   //c = vNor;\n\
+   gl_FragColor = vec4(sqrt(c), 1.);\n\
+}\n\
+';
+
+var fs4 = '\
+void main() {\n\
+   vec4 texture = texture2D(uSampler, vUV);\n\
+   float n = noise(texture.rgb);\n\
+   vec3 c = phong(\n\
+      normalize(vNor), \n\
+      E,\n\
+      vec3(0.01, 0.2, 1.0),\n\
+      vec3(226. / 255., 88. / 255., 34. / 255.),\n\
+      vec4(.5,.5,.5,10.)\n\
+   );\n\
+   c = mix(c, texture.rgb, n);\n\
+   gl_FragColor = vec4(sqrt(c), 1.);\n\
+}\n\
+';
+
+var phong = '\
+#define EPSILON .01;\n\
+vec3 bg_col = vec3(0.0, 0.0, 0.0);\n\
+vec3 E = normalize(vec3(0., 0., -1.));\n\
+vec3 LDir = normalize(vec3(sin(.5),0.,-.5));\n\
+\n\
+vec3 phong(vec3 N, vec3 E, vec3 A, vec3 D, vec4 S)\n\
+{\n\
+   vec3 c = A * bg_col; // ambient color\n\
+   vec3 LDir = normalize(LDir); \n\
+   float d = max(0., dot(N, LDir)); // diffuse value\n\
+   vec3 R = 2. * dot(N, LDir) * N - LDir; // reflection direction\n\
+   float s = pow(max(0., dot(E, R)), S.a); // specular value\n\
+   c += d * D + s * S.rgb * .1 * S.a;\n\
+   return c;\n\
+} \n\
+';
+
+var phong_more_lights = '\
+#define EPSILON .01;\n\
+vec3 bg_col = vec3(0.0, 0.0, 0.0);\n\
+vec3 E = normalize(vec3(0., 0., -1.));\n\
+\n\
+vec3 phong(vec3 N, vec3 E, vec3 A, vec3 D, vec4 S)\n\
+{\n\
+   vec3 c = A * bg_col; // ambient color\n\
+   for (int i = 0; i < NLIGHTS; i++) {\n\
+      vec3 LDir = normalize(uLights[i].direction); \n\
+      float d = max(0., dot(N, LDir)); // diffuse value\n\
+      vec3 R = reflect(-LDir, N); // reflection direction\n\
+      float s = pow(max(0., dot(E, R)), S.a); // specular value\n\
+      c += uLights[i].color * (d * D + s * S.rgb * .1 * S.a);\n\
+   }\n\
+   return c;\n\
+} \n\
+';
+
+var f_shader_header = '\
+varying vec3 vPos, vNor;\n\
+varying vec2 vUV;\n\
+uniform sampler2D uSampler;\n\
+uniform float uTime; \n\
+';
+
+   function prependDefs(shader_code, definitions) {
+      return "#define " + definitions.join("#define ") + shader_code;
+   }
+
+   var uLights;
+   var NLIGHTS = 1;
+
+   var definitions = ["NLIGHTS " + NLIGHTS];
+
+   var vs_ = document.querySelector("#vs").text;
+   var light_struct_ = document.querySelector("#light_struct").text;
+   light_struct_ = prependDefs(light_struct_, definitions);
 
    var obj1, obj2;
 
    var scene = new Scene();
 
-   var material1 = new Material(vs, fs2);
-   material1.setTexture('imgs/polkadots.jpg');
-   var material2 = new Material(vs, fs2);
-   material2.setTexture('imgs/brick.png');
-   // var material3 = new Material(vs, fs2);
-   // material3.setTexture('imgs/brick.png');
-   
-   obj1 = new SceneObject();
-   obj1.setVertices(SHAPE.cylinder(4));
-   obj1.setMaterial(material1);
-   scene.addObject(obj1);
+   var textures = {
+      polkadots : "imgs/polkadots.jpg",
+      brick : "imgs/brick.png",
+      cpz_floor_1 : "imgs/cpz_floor_1.png",
+      cpz_floor_2 : "imgs/cpz_floor_2.png"
+   }
 
-   // obj2 = new SceneObject();
-   // obj2.setVertices(SHAPE.cylinder(20));
-   // obj2.setMaterial(material2);
-   // scene.addObject(obj2);
+   var mat1_shader = f_shader_header 
+                     + light_struct_ 
+                     + phong_more_lights 
+                     + noise_shader 
+                     + fs4;
 
-   // TRYING SPHERE?
-   objS = new SceneObject();
-   objS.setVertices(SHAPE.torus(20));
-   objS.setMaterial(material2);
-   scene.addObject(objS);
 
+   var material1 = new Material(vs_, mat1_shader);
+   material1.setTexture(textures.cpz_floor_2);
+   var material2 = new Material(vs_, f_shader_header + phong + fs3);
+   material2.setTexture(textures.cpz_floor_2);
+
+
+   sphere = new SceneObject();
+   sphere.setVertices(SHAPE.sphere(20));
+   sphere.setMaterial(material1);
+
+
+   var fcs = new SceneObject();
+   fcs.setVertices(SHAPE.cube());
+   fcs.setMaterial(material1);
+
+   var objects = [sphere];
+
+   // add all objects to scene
+   for (var o = 0; o < objects.length; o++) {
+      scene.addObject(objects[o]);
+   }
+
+   // assign scene to canvas
    canvas1.scene = scene;
 
+   // init matrix
    var m = M.identityMatrix();
 
-   var objects = [obj1, objS];
 
 gl_start(canvas1,
    function(time) {
       M.identity(m);
-      ///M.rotateY(m, time/4);
-      //M.rotateZ(m, time/4);
+      //M.perspective(m);
+      M.scale(m, 0.5);
+
+      //M.scale(m, .2);
+      // M.rotateX(m, time);
+      //M.rotateY(m, time);
+      // M.translate(m, Math.sin(time));
       for (var i = 0; i < objects.length; i++) {
          M.save(m);
-            M.scale(m, .1 * (i + 1), .1 * (i + 1), (1 / 4) * (i + 1));
-            M.rotateY(m, time);
-            objects[i].setMatrix(m);
-         M.restore(m);         
+           M.translate(m, [0., 0., -0.01 + (Math.sin(time) - 1) / 2]);
+           M.rotateX(m, time);
+        // M.translate(m, [0., 0., -time]);
+         objects[i].setMatrix(m);
+
+         M.restore(m);
       }
+      ///M.rotateY(m, time/4);
+      //M.rotateZ(m, time/4);
+
    }
 );
 

@@ -42,9 +42,9 @@ function Material(vs, fs) {
          // -------------- IF A TEXTURE FILE HAS BEEN SPECIFIED, LOAD IN THE TEXTURE -------------
 
          if (this.textureFile && ! this.texture) {
-	    var image = new Image(), texture = gl.createTexture(), that = this;
+	         var image = new Image(), texture = gl.createTexture(), that = this;
             image.onload = function() {
-	       try {
+	         try {
                   gl.bindTexture   (gl.TEXTURE_2D, texture);
                   gl.pixelStorei   (gl.UNPACK_FLIP_Y_WEBGL, true);
                   gl.texImage2D    (gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
@@ -52,14 +52,13 @@ function Material(vs, fs) {
                   gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
                   gl.generateMipmap(gl.TEXTURE_2D);
                   that.texture = texture;
-	       }
-	       catch(e) { console.log(e); }
-	    };
-	    image.src = this.textureFile;
-	 }
-
-         this.program = program;
-      }
+	         }
+	         catch(e) { console.log(e); }
+	      };
+	      image.src = this.textureFile;
+	   }
+      this.program = program;
+   }
 
       gl.useProgram(this.program);                             // Load this shader program into GPU.
 
@@ -69,6 +68,33 @@ function Material(vs, fs) {
          gl.activeTexture(gl.TEXTURE0);
          gl.bindTexture  (gl.TEXTURE_2D, this.texture);        //    bind it to the shader program.
       }
+
+      /////////////////////////////////////////////////////////////
+
+      if (true) {
+         uLights = [];
+         for (var i = 0; i < 1; i++) {
+            let name = "uLights[" + i + "].";
+            let lDir = gl.getUniformLocation(this.program, name + "direction");
+            let cDir = gl.getUniformLocation(this.program, name + "color");
+            uLights.push({
+               direction : lDir,
+               color : cDir
+            });
+         }
+
+         function mix(a, b, t) { 
+            return a + t * (b - a);
+         }
+
+         for (var i = 0 ; i < uLights.length; i++) {
+            var d = [Math.sin(time),0.,-.5];
+            var c = [1.0, 1.0, 1.0];
+            gl.uniform3f(uLights[i].direction, d[0], d[1], d[2]);
+            gl.uniform3f(uLights[i].color, c[0], c[1], c[2]);
+         }
+      }
+      /////////////////////////////////////////////////////////////
    }
 }
 
@@ -119,6 +145,7 @@ function gl_start(canvas, update) {           // START WEBGL RUNNING IN A CANVAS
 
    var gl = canvas.gl;
    gl.enable(gl.DEPTH_TEST);
+   gl.depthRange(0, 10);
    gl.depthFunc(gl.LEQUAL);
 
    setTimeout(function() {
@@ -148,7 +175,12 @@ function gl_start(canvas, update) {           // START WEBGL RUNNING IN A CANVAS
             let matrixAddr = gl.getUniformLocation(program, 'matrix');
 
             let renderMatrix = M.identityMatrix();
-            M.matrixMultiply([1,0,0,0, 0,1,0,0, 0,0,-1,-.3, 0,0,0,1], obj.matrix, renderMatrix);
+
+            var n_ =  0.01;
+            var f_ = 1. + time;
+
+            // PERSPECTIVE DONE HERE
+            M.matrixMultiply([1,0,0,0, 0,1,0,0, 0,0, -2 / (f_ - n_), -(f_ + n_) / (f_ - n_), 0,0,0,1], obj.matrix, renderMatrix);
             gl.uniformMatrix4fv(matrixAddr, false, renderMatrix);
 
             let invMatrixAddr = gl.getUniformLocation(program, 'invMatrix');
