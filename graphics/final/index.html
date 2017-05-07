@@ -10,6 +10,74 @@
 <canvas id='canvas1' width=600 height=600></canvas>
 </center>
 </body>
+
+
+<script id='swirly' type='x-shader/x-fragment'>
+//////////////////////////////////////////////////////////////////http://glslsandbox.com/e#40338.2
+
+// built for the Ello gif contest:
+// https://ello.co/medialivexello/post/gif-exhibition
+// Converted by Batblaster
+
+#define PI 3.141592653589793
+#define TAU 6.283185307179586
+
+// from iq / bookofshaders
+float cubicPulse( float c, float w, float x ){
+    x = abs(x - c);
+    if( x>w ) return 0.0;
+    x /= w;
+    return 1.0 - x*x*(3.0-2.0*x);
+}
+
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+    vec2 iResolution = vec2(600., 600.);
+    float time = uTime * 0.55;
+    float rainbowSpeed = 5.0;
+    float colIntensity = 0.15;
+    
+    //////////////////////////////////////////////////////
+    // Create tunnel coordinates (p) and remap to normal coordinates (uv)
+    // Technique from @iq: https://www.shadertoy.com/view/Ms2SWW
+   // and a derivative:   https://www.shadertoy.com/view/Xd2SWD
+    vec2 p = (-iResolution.xy + 2.0*fragCoord)/iResolution.y;     // normalized coordinates (-1 to 1 vertically)
+    vec2 uvOrig = p;
+    // added twist  by me ------------
+    float rotZ = 1. - 0.23 * sin(1. * cos(length(p * 1.5)));
+    p *= mat2(cos(rotZ), sin(rotZ), -sin(rotZ), cos(rotZ));
+   //-------------------------------
+    float a = atan(p.y,p.x);                                   // angle of each pixel to the center of the screen
+    float rSquare = pow( pow(p.x*p.x,4.0) + pow(p.y*p.y,4.0), 1.0/8.0 );   // modified distance metric (http://en.wikipedia.org/wiki/Minkowski_distance)
+    float rRound = length(p);
+    float r = mix(rSquare, rRound, 0.5 + 0.5 * sin(time * 2.));         // interp between round & rect tunnels
+    vec2 uv = vec2( 0.3/r + time, a/3.1415927 );                     // index texture by (animated inverse) radious and angle
+    //////////////////////////////////////////////////////
+
+    // subdivide to grid
+    uv += vec2(0., 0.25 * sin(time + uv.x * 1.2));       // pre-warp
+    uv /= vec2(1. + 0.0002 * length(uvOrig));
+    vec2 uvDraw = fract(uv * 12.);                    // create grid
+
+    // draw lines
+   float col = cubicPulse(0.5, 0.06, uvDraw.x);
+    col = max(col, cubicPulse(0.5, 0.06, uvDraw.y));
+        
+    // darker towards center, light towards outer
+    col = col * r * 0.8;
+    col += colIntensity * length(uvOrig);
+    // NEW!
+    // sine function creates monotonous sweep across color band, phase differences of 0, 120 and 240 degrees are added
+    fragColor = vec4(vec3(col * sin(time*rainbowSpeed), col * sin(time*rainbowSpeed + 2.0*(PI/3.0)), col * sin(time*rainbowSpeed + 4.0*(PI/3.0))), 1.);
+}
+
+void main( void ) {
+
+   mainImage(gl_FragColor,gl_FragCoord.xy);
+
+}
+
+</script>
    
 
 <script id="vs" type="notjs">
@@ -57,8 +125,10 @@ void main() {
    //    c = mix(vec3(0.2,.02,.045), c, .5+.5 * vPos.y);
    // vec3 c = backgroundColor(vec3(0.)) + .01 * noise(vPos) - .1 - vec3(.05,.12,.3);
    //    c = mix(vec3(0.2,.02,.045), c, .5+.5 * vPos.y);
-      vec3 c = backgroundColor(vec3(0.)) + .01 * noise(vPos) - .1 - vec3(.05,.12,.3);
-      c = mix(vec3(0.2,.02,.045), c, .5+.5 * vPos.y) + min(log(uTime), .001);
+
+
+   vec3 c = backgroundColor(vec3(0.)) + .01 * noise(vPos) - .1 - vec3(.05,.12,.3);
+   c = mix(vec3(0.2,.02,.045), c, .5+.5 * vPos.y) + min(log(uTime), .001);
       //c = vPos + sin(uTime);
    gl_FragColor = vec4(sqrt(c), 1.);           // Final pixel color
    // }
@@ -107,10 +177,23 @@ void main() {\n\
 }\n\
 ';
 
-var fs4 = '\
+var uv_static = '\
+vec4 texture = texture2D(uSampler, vUV);\n\
+';
+// var uv_animate = '\
+// vec2 uv_off = vec2(vUV.x, vUV.y + uTime);\n\vec4 texture = texture2D(uSampler, uv_off);\n\
+// ';
+var uv_animate = '\
+#define UVOFFSETU (0.)\n\
+#define UVOFFSETV (-(uTime * 4.2))\n\
+vec4 texture = texture2D(uSampler, vec2(vUV.x + UVOFFSETU, vUV.y + UVOFFSETV));\n\
+';
+
+var mainEntityShader = ['\
 void main() {\n\
-   vec4 texture = texture2D(uSampler, vUV);\n\
-   if (texture.a != 1.0) {\n\
+   ',
+   uv_static,
+   'if (texture.a != 1.0) {\n\
       discard;\n\
    }\n\
    vec3 c = vec3(0.,0.,0.);\n\
@@ -127,7 +210,7 @@ void main() {\n\
    c *= texture.rgb;\n\
    gl_FragColor = vec4(sqrt(c), 1.);\n\
 }\n\
-';
+'];
 
 var phong = '\
 #define EPSILON .01;\n\
@@ -170,7 +253,7 @@ var f_shader_header = '\
 varying vec3 vPos, vNor;\n\
 varying vec2 vUV;\n\
 uniform sampler2D uSampler;\n\
-uniform float uTime; \n\
+uniform float uTime, uTimePrev; \n\
 ';
 
    function prependDefs(shader_code, definitions) {
@@ -319,24 +402,38 @@ uniform float uTime; \n\
       fr_wlk : "imgs/final_rush_walkway_1.png",
    }
 
-   var mat1_shader = f_shader_header 
+   var mainEntityShaderStaticUV = mainEntityShader.join('');
+   mainEntityShader[1] = uv_animate;
+   var mainEntityShaderAnimatedUV1 = mainEntityShader.join('');
+
+
+
+
+   var mat1_shader_static = f_shader_header 
                      + light_struct_ 
                      + phong_more_lights 
-                     + noise_shader 
-                     + fs4;
+                     + noise_shader
+                     + mainEntityShaderStaticUV;
+
+   var mat1_shader_animated = f_shader_header 
+                              + light_struct_ 
+                              + phong_more_lights 
+                              + noise_shader
+                              + mainEntityShaderAnimatedUV1;
 
    var bg_shader = f_shader_header + noise_shader + document.querySelector("#background_1").text;
+   //var bg_shader = f_shader_header + noise_shader + document.querySelector("#swirly").text;
 
 
    // MATERIALS
 
-   var material1 = new Material(vs_, mat1_shader);
+   var material1 = new Material(vs_, mat1_shader_animated);
    material1.setTexture(Textures.fr_wlk);
 
-   var materialPlayer = new Material(vs_, mat1_shader);
+   var materialPlayer = new Material(vs_, mat1_shader_static);
    materialPlayer.setTexture(Textures.cpz_floor_2);
 
-   var material2 = new Material(vs_, mat1_shader);
+   var material2 = new Material(vs_, mat1_shader_static);
    material2.setTexture(Textures.cpz_floor_1);
 
    var bg_material = new Material(vs_, bg_shader);
@@ -442,7 +539,10 @@ var DEL_PATH = (function() {
    return operation;
 }());
 
+// unused so far
 var path_remove_check = new TimeEventResponse(0.06, DEL_PATH);
+
+// TEMPORARY VARIABLES FOR PRESENTATION SEQUENCE:
 
 var old = PROJECTION.far;
 var skew_ = 0;
@@ -451,6 +551,9 @@ var retTime = 0;
 var stopTestAnimation = false;
 var skewForwards = true;
 var bgGeoTransCount = 0;
+
+var removedBlast = false;
+var restoreLights = false;
 
 gl_start(canvas1,
    function(time, prevTime) {
@@ -484,18 +587,30 @@ gl_start(canvas1,
       //skew_ = 0.0;
       // BACKGROUND
       M.save(m);
-                     M.rotateY(m, skew_);
-                  M.rotateX(m, Math.sin(-craft.ypos) * 0.09);
-                  M.translate(m, [0, 0, -(f * 2.0)]);
 
-         //M.scale(m, 30.);
-         var scale_ = Math.log(time + 1) * 1.9
-         M.scale(m, 60. * scale_, 60 * scale_, scale_);
          // M.translate(m, [0, 0, time -PROJECTION.far / 2]);
-         M.translate(m, [0, 0, time -PROJECTION.far / 8]);
-         M.translate(m, [0, 0, -1.5]);
+         if (!removedBlast) {
+            M.rotateY(m, skew_);
+            M.rotateX(m, Math.sin(-craft.ypos) * 0.09);
+            M.translate(m, [0, 0, -(f * 2.0)]);
 
-         bgpoly.setMatrix(m);
+            //M.scale(m, 30.);
+            var scale_ = Math.log(time + 1) * 1.9
+            M.scale(m, 60. * scale_, 60 * scale_, scale_);
+            if (time < 10.0) {
+               M.translate(m, [0, 0, time -PROJECTION.far / 8]);
+            }
+            else if (time < 25.0) {
+               M.translate(m, [0, 0, -(time) + 2 * 10.0 -PROJECTION.far / 8]);
+            }
+            else {
+               scene.removeObject(bgpoly);
+               removedBlast = true;
+            }
+            M.translate(m, [0, 0, -1.5]);
+
+            bgpoly.setMatrix(m);
+         }
       M.restore(m);
       // BACKGROUND FULL
       M.save(m);
@@ -531,14 +646,18 @@ gl_start(canvas1,
             M.rotateZ(m, Math.sin(-craft.xpos) * 0.09);
             M.rotateX(m, Math.sin(-craft.ypos) * 0.09);
 
-            if (stopTestAnimation) {
-               M.rotateZ(m, Math.min(time - retTime, Math.PI));
+            if (stopTestAnimation && !restoreLights) {
+               let minAngle = Math.min(time - retTime, 2 * Math.PI);
+               if (minAngle == 2 * Math.PI) {
+                  restoreLights = true;
+               }
+               M.rotateZ(m, minAngle);
             }
 
             M.translate(m, [0, 0, -(f * 2.0)]);
             M.translate(m, [0, 0, 1]);
             movingFloor.setMatrix(m);
-            movingFloor.translateTexture(0.0, -(0.1 + 0.04) * timeScale);
+            //movingFloor.translateTexture(0.0, -(0.1 + 0.04) * timeScale);
 
             //staticTunnel.setMatrix(m);
          M.restore(m);

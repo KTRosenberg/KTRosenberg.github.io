@@ -97,7 +97,7 @@ function Material(vs, fs) {
          var c = [1.0, 0.25 , 0.39];
          if (i == 0) {
             var d = [0.0, Math.sin(time), .5];
-            if (stopTestAnimation !== undefined && stopTestAnimation) {
+            if (stopTestAnimation !== undefined && stopTestAnimation && !restoreLights) {
                d = [0.0, -Math.sin(time), .5]; 
             }
             
@@ -111,7 +111,7 @@ function Material(vs, fs) {
             // gl.uniform3f(uLights[i].color, c[0], c[1], c[2]);
          
             var d = [0.0, -1, -1.0];
-            if (stopTestAnimation !== undefined && stopTestAnimation) {
+            if (stopTestAnimation !== undefined && stopTestAnimation && !restoreLights) {
                d = [0.0, 1, -1.0]; 
             }
 
@@ -248,6 +248,11 @@ function gl_start(canvas, update) {           // START WEBGL RUNNING IN A CANVAS
             ///////////////////////////////////////////////////////////////////////////////////////////// TIME
             var timeAddress = gl.getUniformLocation(program,"uTime");
             gl.uniform1f(timeAddress, time);
+            var prevTimeAddress = gl.getUniformLocation(program,"uTimePrev");
+            gl.uniform1f(prevTimeAddress, prevTime);
+
+            // var TEST = gl.getUniformLocation(program, "REMOVEME");
+            // gl.uniform1f(TEST, 1.);
             
             //-------------- SET THE FORWARD AND INVERSE TRANSFORM MATRICES IN THE GPU. --------------
             let matrixAddr = gl.getUniformLocation(program, 'matrix');
