@@ -65,81 +65,149 @@ M = (function() {
    }
 
    // http://www.songho.ca/opengl/gl_projectionmatrix.html 
-   my.perspective = function(m, n, f, l, r, b, t) {
-      if (n === undefined) {
-        // left-handed
-        console.log("NEW VERSION ON");
-        n = -1.;
-        f = 1;
-        b = -1.
-        t = 1.;
-        l = -1.;
-        r = 1.;
-      }
+   // my.perspective = function(m, n, f, l, r, b, t) {
+   //    if (n === undefined) {
+   //      // left-handed
+   //      console.log("NEW VERSION ON");
+   //      n = -1.;
+   //      f = 1;
+   //      b = -1.
+   //      t = 1.;
+   //      l = -1.;
+   //      r = 1.;
+   //    }
 
-      if (r == -l && t == -b) { 
-        M.matrixMultiply(
-          m, 
-          [
-            (n / r), 0, 0, 0,
-            0, (n / t), 0, 0,
-            0, 0, (-1 * (f + n)) / (f - n), -1,
-            0, 0, (-2 * f * n) / (f - n), 0   
-          ], 
-          m
-        );
-      }
-      else {
-        M.matrixMultiply(
-          m, 
-          [
-            (2 * n) / (r - l), 0, 0, 0,
-            0, (2 * n) / (t - b), 0, 0,
-            (r + l) / (r - l), (t + b) / (t - b), (-1 * (f + n)) / (f - n), -1,
-            0, 0, (-2 * f * n) / (f - n), 0   
-          ], 
-          m
-        );    
-      }
-   }
+   //    if (r == -l && t == -b) { 
+   //      M.matrixMultiply(
+   //        m, 
+   //        [
+   //          (n / r), 0, 0, 0,
+   //          0, (n / t), 0, 0,
+   //          0, 0, (-1 * (f + n)) / (f - n), -1,
+   //          0, 0, (-2 * f * n) / (f - n), 0   
+   //        ], 
+   //        m
+   //      );
+   //    }
+   //    else {
+   //      M.matrixMultiply(
+   //        m, 
+   //        [
+   //          (2 * n) / (r - l), 0, 0, 0,
+   //          0, (2 * n) / (t - b), 0, 0,
+   //          (r + l) / (r - l), (t + b) / (t - b), (-1 * (f + n)) / (f - n), -1,
+   //          0, 0, (-2 * f * n) / (f - n), 0   
+   //        ], 
+   //        m
+   //      );    
+   //    }
+   // }
 
-   // http://www.songho.ca/opengl/gl_projectionmatrix.html 
-   my.orthographic = function(m, n, f, l, r, b, t) {
-      if (n === undefined) {
-        // left-handed
-        n = -1.;
-        f = 1.;
-        b = -1.
-        t = 1.;
-        l = -1.;
-        r = 1.;
-      }
+   // // http://www.songho.ca/opengl/gl_projectionmatrix.html 
+   // my.orthographic = function(m, n, f, l, r, b, t) {
+   //    if (n === undefined) {
+   //      // left-handed
+   //      n = -1.;
+   //      f = 1.;
+   //      b = -1.
+   //      t = 1.;
+   //      l = -1.;
+   //      r = 1.;
+   //    }
 
-      if (r == -l && t == -b) { 
-        M.matrixMultiply(
-          m, 
-          [
-            (1 / r), 0, 0, 0,
-            0, (1 / t), 0, 0,
-            0, 0, -2 / (f - n), 0,
-            0, 0, -1 * ((f + n) / (f - n)), 1   
-          ], 
-          m
-        );
-      }
-      else {
-        M.matrixMultiply(
-          m, 
-          [
-            2 / (r - 1), 0, 0, 0,
-            0, 2 / (t - b), 0, 0,
-            0, 0, (-2 / (f - n)), 0,
-            -1 * ((r + l) / (r - l)), -1 * ((t + b) / (t - b)), -1 * ((f + n) / (f - n)), 1
-          ], 
-          m
-        );        
-      }
-   }
+   //    if (r == -l && t == -b) { 
+   //      M.matrixMultiply(
+   //        m, 
+   //        [
+   //          (1 / r), 0, 0, 0,
+   //          0, (1 / t), 0, 0,
+   //          0, 0, -2 / (f - n), 0,
+   //          0, 0, -1 * ((f + n) / (f - n)), 1   
+   //        ], 
+   //        m
+   //      );
+   //    }
+   //    else {
+   //      M.matrixMultiply(
+   //        m, 
+   //        [
+   //          2 / (r - 1), 0, 0, 0,
+   //          0, 2 / (t - b), 0, 0,
+   //          0, 0, (-2 / (f - n)), 0,
+   //          -1 * ((r + l) / (r - l)), -1 * ((t + b) / (t - b)), -1 * ((f + n) / (f - n)), 1
+   //        ], 
+   //        m
+   //      );        
+   //    }
+   // }
+
+   //http://stackoverflow.com/questions/13206220/3d-skew-transformation-matrix-along-one-coordinate-axis
+    my.skew1 = function(m, a) {
+
+    M.matrixMultiply(m, [
+      1,Math.tan(a),0,0,
+      0,1,0,0,
+      0,1,1,0,
+      0,0,0,1
+    ],
+    m);
+   };
+
+    my.skew2 = function(m, a) {
+
+    M.matrixMultiply(m, [
+      1,0,Math.tan(a),0,
+      0,1,0,0,
+      0,0,1,0,
+      0,0,0,1
+    ],
+    m);
+   };
+
+    my.skew3 = function(m, a) {
+
+    M.matrixMultiply(m, [
+      1,0,0,0,
+      Math.tan(a),1,0,0,
+      0,0,1,0,
+      0,0,0,1
+    ],
+    m);
+   };
+
+    my.skew4 = function(m, a) {
+
+    M.matrixMultiply(m, [
+      1,0,0,0,
+      0,1,Math.tan(a),0,
+      0,0,1,0,
+      0,0,0,1
+    ],
+    m);
+   };
+
+    my.skew5 = function(m, a) {
+
+    M.matrixMultiply(m, [
+      1,0,0,0,
+      0,1,0,0,
+      Math.tan(a),0,1,0,
+      0,0,0,1
+    ],
+    m);
+   };
+
+
+   my.skew6 = function(m, a) {
+
+    M.matrixMultiply(m, [
+      1,0,0,0,
+      0,1,0,0,
+      0,Math.tan(a),1,0,
+      0,0,0,1
+    ],
+    m);
+   };
 
    return my;
 })();

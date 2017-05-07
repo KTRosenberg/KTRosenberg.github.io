@@ -31,6 +31,12 @@ var SHAPE = (function() {
       return V;
    }
 
+    my.disk = function(n) {
+      var V = [];
+      addDiskVertices(V, n, -1, -1);
+      return V;
+   }
+
    function addTubeVertices(V, n) {
       return addMeshVertices(V, n, 1, function(u, v) {
          let theta = 2 * Math.PI * u;
@@ -63,6 +69,23 @@ var SHAPE = (function() {
    my.sphere = function (n) {
       var V = [];
       addSphereVertices(V, n);
+      return V;
+   }
+
+  function addSphereVerticesEx(V, n, offset) {
+      return addMeshVertices(V, n, n, function(u, v) {
+         let theta = 2 * Math.PI * u;
+         let phi   = Math.PI * (v - (offset !== undefined) ? offset : 0.5);
+         let z     = Math.sin(phi);
+         let c     = Math.cos(theta) * Math.cos(phi);
+         let s     = Math.sin(theta) * Math.cos(phi);
+         return [c,s,z, c,s,z, u,v];
+      });
+  }
+
+    my.sphereEx = function (n, offset) {
+      var V = [];
+      addSphereVerticesEx(V, n, offset);
       return V;
    }
 
@@ -164,14 +187,72 @@ var SHAPE = (function() {
               1, -1, 1,   0, 0,1,  1,1,
               1,  1, 1,   0, 0,1,  1,0,
              -1,  1, 1,   0, 0,1,  0,0 
+         ],
+         // OPPOSITE FACES ///////////////
+         // 6
+         [
+            -1, 1,  1,    0,-1,0,  0,1,
+             -1, 1,  -1,  0,-1,0,  0,0,
+             1, 1,  -1,   0,-1,0,  1,0,
+
+              1, 1,  -1,  0,-1,0,  1,0,
+              1, 1,  1,   0,-1,0,  1,1,
+              -1, 1,  1,  0,-1,0,  0,1,
+         ],
+         // 7
+         [
+             1,  1, -1,   -1, 0,0,  0,1,
+             1,  -1,  -1, -1, 0,0,  0,0,
+             1, -1,  1,   -1, 0,0,  1,0,
+
+            1,  -1,  1,   -1, 0,0,  1,0,
+            1,  1,  1,    -1, 0,0,  1,1,
+            1,  1, -1,    -1, 0,0,  0,1,       
+         ],
+         // 8
+         [
+             -1, -1, -1,   0,-1,0,  0,1,
+             -1, -1,  1,   0,-1,0,  0,0,
+             1, -1, 1,     0,-1,0,  1,0,
+
+              1, -1,  1,   0,-1,0,  1,0,
+              1, -1, -1,   0,-1,0,  1,1,
+              -1, -1,-1,   0,-1,0,  0,1,
+         ],
+         // 9
+         [
+             -1,  1,  1,   1, 0,0,  0,1,
+             -1,  -1, 1,   1, 0,0,  0,0,
+             -1, -1, -1,   1, 0,0,  1,0,
+
+            -1, -1, -1,   1, 0,0,  1,0,
+            -1,  1, -1,   1, 0,0,  1,1,
+            -1,  1,  1,   1, 0,0,  0,1,
+         ],
+         // 10
+         [
+             -1,  1, -1,   0, 0,1,  0,1,
+             -1, -1, -1,   0, 0,1,  0,0,
+              1, -1, -1,   0, 0,1,  1,0,
+
+              1, -1, -1,   0, 0,1,  1,0, 
+              1,  1, -1,   0, 0,1,  1,1,
+             -1,  1, -1,   0, 0,1,  0,1, 
+         ],
+         // 11
+         [
+             -1,  1, 1,   0, 0,-1,  0,1,
+             -1, -1, 1,   0, 0,-1,  0,0,
+              1, -1, 1,   0, 0,-1,  1,0,
+
+              1, -1, 1,   0, 0,-1,  1,0,
+              1,  1, 1,   0, 0,-1,  1,1,
+             -1,  1, 1,   0, 0,-1,  0,1,
          ]
       ];
 
-      var facesOpp = [
-      ]
-
       if (whichFaces === undefined) {
-         for (var f = 0; f < faces.length; f++) {
+         for (var f = 0; f < 6; f++) {
             Array.prototype.push.apply(V, faces[f]);
          }
       }

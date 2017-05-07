@@ -32,8 +32,14 @@ function Material(vs, fs) {
             gl.attachShader(program, shader);
          };
 
+         /////////////////////////////////////////////
+         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+         gl.enable(gl.BLEND);
+
          addshader(gl.VERTEX_SHADER  , vs);                    // Add vertex and fragment shaders.
          addshader(gl.FRAGMENT_SHADER, fsHeader + fs);
+
+
 
          gl.linkProgram(program);                              // Link program, report any errors.
          if (! gl.getProgramParameter(program, gl.LINK_STATUS))
@@ -71,28 +77,47 @@ function Material(vs, fs) {
 
       /////////////////////////////////////////////////////////////
 
-      if (true) {
-         uLights = [];
-         for (var i = 0; i < 1; i++) {
-            let name = "uLights[" + i + "].";
-            let lDir = gl.getUniformLocation(this.program, name + "direction");
-            let cDir = gl.getUniformLocation(this.program, name + "color");
-            uLights.push({
-               direction : lDir,
-               color : cDir
-            });
-         }
+      uLights = [];
+      for (var i = 0; i < NLIGHTS; i++) {
+         let name = "uLights[" + i + "].";
+         let lDir = gl.getUniformLocation(this.program, name + "direction");
+         let cDir = gl.getUniformLocation(this.program, name + "color");
+         uLights.push({
+            direction : lDir,
+            color : cDir
+         });
+      }
 
-         function mix(a, b, t) { 
-            return a + t * (b - a);
-         }
+      function mix(a, b, t) { 
+         return a + t * (b - a);
+      }
 
-         for (var i = 0 ; i < uLights.length; i++) {
-            var d = [Math.sin(time),0.,.5];
-            d = [0, 0, 1];
-            var c = [.2, .2, .2];
+      for (var i = 0 ; i < uLights.length; i++) {
+         // var c = [0.3, 0.25 , 1.0];
+         var c = [1.0, 0.25 , 0.39];
+         if (i == 0) {
+            var d = [0.0, Math.sin(time), .5];
+            if (stopTestAnimation !== undefined && stopTestAnimation) {
+               d = [0.0, -Math.sin(time), .5]; 
+            }
+            
             gl.uniform3f(uLights[i].direction, d[0], d[1], d[2]);
             gl.uniform3f(uLights[i].color, c[0], c[1], c[2]);
+         }
+         else if (i == 1) {
+            // var d = [0.0 ,Math.sin(time),.5];
+            // var c = [1.0, 1.0 / 2, 1.0 / 2];
+            // gl.uniform3f(uLights[i].direction, d[0], d[1], d[2]);
+            // gl.uniform3f(uLights[i].color, c[0], c[1], c[2]);
+         
+            var d = [0.0, -1, -1.0];
+            if (stopTestAnimation !== undefined && stopTestAnimation) {
+               d = [0.0, 1, -1.0]; 
+            }
+
+            //var c = [1.0 / 2, 1.0 / 2, 1.0 / 2];
+            gl.uniform3f(uLights[i].direction, d[0], d[1], d[2]);
+            gl.uniform3f(uLights[i].color, c[0], c[1], c[2]);          
          }
       }
       /////////////////////////////////////////////////////////////
@@ -128,19 +153,34 @@ function SceneObject(vertices) {
       this.material.bindVertexAttribute('aUV' , 2, gl.FLOAT, 8, 6);
    },
 
-   this.translateTexture = function(amountU, amountV) {
+   this.translateTexture = function(amountU, amountV, groupNums) {
       if (this.vertexData === undefined) {
          return;
       }
-      let v_ = this.vertexData;
-      let len = this.vertexData.length;
-      let  ufloat = new Float32Array(1);
-      let  vfloat = new Float32Array(1);
-      for (var i = 0; i < len; i += 8) { 
-         ufloat[0] = (1.0 + amountU) % 1.0;
-         vfloat[0] = (1.0 + amountV) % 1.0;
-         v_[i + 6] += ufloat[0];
-         v_[i + 7] += vfloat[0];
+      if (groupNums === undefined) {
+         let v_ = this.vertexData;
+         let len = this.vertexData.length;
+         let  ufloat = new Float32Array(1);
+         let  vfloat = new Float32Array(1);
+         for (var i = 0; i < len; i += 8) { 
+            ufloat[0] = (1.0 + amountU) % 1.0;
+            vfloat[0] = (1.0 + amountV) % 1.0;
+            v_[i + 6] += ufloat[0];
+            v_[i + 7] += vfloat[0];
+         }
+      }
+      else {
+         let v_ = this.vertexData;
+         let len = this.vertexData.length;
+         let  ufloat = new Float32Array(1);
+         let  vfloat = new Float32Array(1);
+         for (var group = 0; group < groupNums.length; groupNums++) {
+            let i = groupNums[group] * 8;
+            ufloat[0] = (1.0 + amountU) % 1.0;
+            vfloat[0] = (1.0 + amountV) % 1.0;
+            v_[i + 6] += ufloat[0];
+            v_[i + 7] += vfloat[0];      
+         }
       }
 
    }
@@ -151,10 +191,15 @@ function Scene() {
 
    this.addObject = function(obj) {
       this.objects.push(obj);
-   }
+   };
+
+   this.removeObject = function(obj) {
+      return this.objects.remove(obj);
+   };
 }
 
 var time = 0;
+var prevTime = 0;
 
 var PROJECTION = (function() {
    var p = {
@@ -181,10 +226,12 @@ function gl_start(canvas, update) {           // START WEBGL RUNNING IN A CANVAS
             return;
 
          if (gl.startTime === undefined)                                   // First time through,
-            gl.startTime = Date.now();                                     //    record the start time.
+            gl.startTime = Date.now();
+                                              //    record the start time.
+         prevTime = time;
          time = (Date.now() - gl.startTime)  / 1000;
 
-         update(time);
+         update(time, prevTime);
 
          for (let n = 0 ; n < scene.objects.length ; n++) {                // RENDER ALL THE OBJECTS.
             let obj = scene.objects[n];
@@ -193,17 +240,22 @@ function gl_start(canvas, update) {           // START WEBGL RUNNING IN A CANVAS
 
             obj.init(gl);                                                  // Initialize the object.
 
-            gl.uniform1f(gl.uTime, time);                                  // Set time for the shader.
+            // gl.uniform1f(gl.uTime, time);                                  // Set time for the shader.
+            /////////////////////////////////////////////////////////////////////////////////////////////
 
-            //-------------- SET THE FORWARD AND INVERSE TRANSFORM MATRICES IN THE GPU. --------------
 
             let program = obj.material.program;
+            ///////////////////////////////////////////////////////////////////////////////////////////// TIME
+            var timeAddress = gl.getUniformLocation(program,"uTime");
+            gl.uniform1f(timeAddress, time);
+            
+            //-------------- SET THE FORWARD AND INVERSE TRANSFORM MATRICES IN THE GPU. --------------
             let matrixAddr = gl.getUniformLocation(program, 'matrix');
 
             let renderMatrix = M.identityMatrix();
 
             var n_ =  PROJECTION.near;
-            var f_ = PROJECTION.far + time;
+            var f_ = PROJECTION.far /*+ time*/;
 
             // PERSPECTIVE DONE HERE
             M.matrixMultiply([
