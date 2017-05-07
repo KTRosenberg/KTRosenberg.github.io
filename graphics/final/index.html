@@ -643,7 +643,7 @@ gl_start(canvas1,
                            M.rotateY(m, skew_);
 
             let movingFloor = floors[f];
-            M.rotateZ(m, Math.sin(-craft.xpos) * 0.09);
+            M.rotateZ(m, Math.sin(craft.xpos) * 0.09);
             M.rotateX(m, Math.sin(-craft.ypos) * 0.09);
 
             if (stopTestAnimation && !restoreLights) {
@@ -665,7 +665,7 @@ gl_start(canvas1,
 
       M.save(m);
                         M.rotateY(m, skew_);
-                        M.rotateZ(m, Math.sin(-craft.xpos) * 0.09);
+                        M.rotateZ(m, Math.sin(craft.xpos) * 0.09);
                         M.rotateX(m, Math.sin(-craft.ypos) * 0.09);
                M.scale(m, .5);
 
