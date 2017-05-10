@@ -50,19 +50,19 @@ M = (function() {
                 x * m[2] + y * m[6] + z * m[10] + w * m[14],
                 x * m[3] + y * m[7] + z * m[11] + w * m[15] ]; }
 
-   my.perspectiveCam = function(m, v) {
-      var x, y, z = 0;
-      if (v instanceof Array) {
-         x = v[0];
-         y = v[1];
-         z = v[2];
-      }
-      else {
-         x = y = z = v;
-      }
+   // my.perspectiveCam = function(m, v) {
+   //    var x, y, z = 0;
+   //    if (v instanceof Array) {
+   //       x = v[0];
+   //       y = v[1];
+   //       z = v[2];
+   //    }
+   //    else {
+   //       x = y = z = v;
+   //    }
 
-      M.matrixMultiply(m, [1,0,0,x, 0,1,0,y, 0,0,1,z, 0,0,0,1], m);
-   }
+   //    M.matrixMultiply(m, [1,0,0,x, 0,1,0,y, 0,0,1,z, 0,0,0,1], m);
+   // }
 
    // http://www.songho.ca/opengl/gl_projectionmatrix.html 
    // my.perspective = function(m, n, f, l, r, b, t) {

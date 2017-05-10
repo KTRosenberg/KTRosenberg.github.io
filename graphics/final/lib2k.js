@@ -153,35 +153,36 @@ function SceneObject(vertices) {
       this.material.bindVertexAttribute('aUV' , 2, gl.FLOAT, 8, 6);
    },
 
+   // UNUSED, better in GPU
    this.translateTexture = function(amountU, amountV, groupNums) {
-      if (this.vertexData === undefined) {
-         return;
-      }
-      if (groupNums === undefined) {
-         let v_ = this.vertexData;
-         let len = this.vertexData.length;
-         let  ufloat = new Float32Array(1);
-         let  vfloat = new Float32Array(1);
-         for (var i = 0; i < len; i += 8) { 
-            ufloat[0] = (1.0 + amountU) % 1.0;
-            vfloat[0] = (1.0 + amountV) % 1.0;
-            v_[i + 6] += ufloat[0];
-            v_[i + 7] += vfloat[0];
-         }
-      }
-      else {
-         let v_ = this.vertexData;
-         let len = this.vertexData.length;
-         let  ufloat = new Float32Array(1);
-         let  vfloat = new Float32Array(1);
-         for (var group = 0; group < groupNums.length; groupNums++) {
-            let i = groupNums[group] * 8;
-            ufloat[0] = (1.0 + amountU) % 1.0;
-            vfloat[0] = (1.0 + amountV) % 1.0;
-            v_[i + 6] += ufloat[0];
-            v_[i + 7] += vfloat[0];      
-         }
-      }
+      // if (this.vertexData === undefined) {
+      //    return;
+      // }
+      // if (groupNums === undefined) {
+      //    let v_ = this.vertexData;
+      //    let len = this.vertexData.length;
+      //    let  ufloat = new Float32Array(1);
+      //    let  vfloat = new Float32Array(1);
+      //    for (var i = 0; i < len; i += 8) { 
+      //       ufloat[0] = (1.0 + amountU) % 1.0;
+      //       vfloat[0] = (1.0 + amountV) % 1.0;
+      //       v_[i + 6] += ufloat[0];
+      //       v_[i + 7] += vfloat[0];
+      //    }
+      // }
+      // else {
+      //    let v_ = this.vertexData;
+      //    let len = this.vertexData.length;
+      //    let  ufloat = new Float32Array(1);
+      //    let  vfloat = new Float32Array(1);
+      //    for (var group = 0; group < groupNums.length; groupNums++) {
+      //       let i = groupNums[group] * 8;
+      //       ufloat[0] = (1.0 + amountU) % 1.0;
+      //       vfloat[0] = (1.0 + amountV) % 1.0;
+      //       v_[i + 6] += ufloat[0];
+      //       v_[i + 7] += vfloat[0];      
+      //    }
+      // }
 
    }
 }
@@ -260,7 +261,7 @@ function gl_start(canvas, update) {           // START WEBGL RUNNING IN A CANVAS
             let renderMatrix = M.identityMatrix();
 
             var n_ =  PROJECTION.near;
-            var f_ = PROJECTION.far /*+ time*/;
+            var f_ = PROJECTION.far;
 
             // PERSPECTIVE DONE HERE
             M.matrixMultiply([
