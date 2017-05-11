@@ -14,82 +14,13 @@
 Final Project, "Escape Sequence" (try arrow keys)
 </p>
 
-
-<script id='swirly' type='x-shader/x-fragment'>
-//////////////////////////////////////////////////////////////////http://glslsandbox.com/e#40338.2
-
-// built for the Ello gif contest:
-// https://ello.co/medialivexello/post/gif-exhibition
-// Converted by Batblaster
-
-#define PI 3.141592653589793
-#define TAU 6.283185307179586
-
-// from iq / bookofshaders
-float cubicPulse( float c, float w, float x ){
-    x = abs(x - c);
-    if( x>w ) return 0.0;
-    x /= w;
-    return 1.0 - x*x*(3.0-2.0*x);
-}
-
-void mainImage( out vec4 fragColor, in vec2 fragCoord )
-{
-    vec2 iResolution = vec2(600., 600.);
-    float time = uTime * 0.55;
-    float rainbowSpeed = 5.0;
-    float colIntensity = 0.15;
-    
-    //////////////////////////////////////////////////////
-    // Create tunnel coordinates (p) and remap to normal coordinates (uv)
-    // Technique from @iq: https://www.shadertoy.com/view/Ms2SWW
-   // and a derivative:   https://www.shadertoy.com/view/Xd2SWD
-    vec2 p = (-iResolution.xy + 2.0*fragCoord)/iResolution.y;     // normalized coordinates (-1 to 1 vertically)
-    vec2 uvOrig = p;
-    // added twist  by me ------------
-    float rotZ = 1. - 0.23 * sin(1. * cos(length(p * 1.5)));
-    p *= mat2(cos(rotZ), sin(rotZ), -sin(rotZ), cos(rotZ));
-   //-------------------------------
-    float a = atan(p.y,p.x);                                   // angle of each pixel to the center of the screen
-    float rSquare = pow( pow(p.x*p.x,4.0) + pow(p.y*p.y,4.0), 1.0/8.0 );   // modified distance metric (http://en.wikipedia.org/wiki/Minkowski_distance)
-    float rRound = length(p);
-    float r = mix(rSquare, rRound, 0.5 + 0.5 * sin(time * 2.));         // interp between round & rect tunnels
-    vec2 uv = vec2( 0.3/r + time, a/3.1415927 );                     // index texture by (animated inverse) radious and angle
-    //////////////////////////////////////////////////////
-
-    // subdivide to grid
-    uv += vec2(0., 0.25 * sin(time + uv.x * 1.2));       // pre-warp
-    uv /= vec2(1. + 0.0002 * length(uvOrig));
-    vec2 uvDraw = fract(uv * 12.);                    // create grid
-
-    // draw lines
-   float col = cubicPulse(0.5, 0.06, uvDraw.x);
-    col = max(col, cubicPulse(0.5, 0.06, uvDraw.y));
-        
-    // darker towards center, light towards outer
-    col = col * r * 0.8;
-    col += colIntensity * length(uvOrig);
-    // NEW!
-    // sine function creates monotonous sweep across color band, phase differences of 0, 120 and 240 degrees are added
-    fragColor = vec4(vec3(col * sin(time*rainbowSpeed), col * sin(time*rainbowSpeed + 2.0*(PI/3.0)), col * sin(time*rainbowSpeed + 4.0*(PI/3.0))), 1.);
-}
-
-void main( void ) {
-
-   mainImage(gl_FragColor,gl_FragCoord.xy);
-
-}
-
-</script>
-   
-
 <script id="vs" type="notjs">
 attribute vec3 aPos, aNor;
 attribute vec2 aUV;
 varying   vec3 vPos, vNor;
 varying   vec2 vUV;
 uniform   mat4 matrix, invMatrix;
-uniform  float uTime;
+uniform   float uTime;
 void main() {
    vec4 pos = matrix * vec4(aPos, 1.);
    vec4 nor = vec4(aNor, 0.) * invMatrix;
@@ -98,9 +29,6 @@ void main() {
    vNor = nor.xyz;
    vUV  = aUV;
 }
-</script>
-
-<script id="fs_1" type>
 </script>
 
 <script id="light_struct" type='x-shader/x-fragment'>
@@ -112,15 +40,22 @@ uniform Light uLights[NLIGHTS];
 </script>
 
 <script id='background_1' type='x-shader/x-fragment'>
-vec3 backgroundColor(vec3 dir) {
+vec3 backgroundColor(vec3 dir, vec3 pos_loc)
+{
    float t = .5 - .5 * dir.y;
-   vec3 c = vec3(.001 * tan(dot(vPos.x, vPos.y))) + 0.005 * vPos.y;
+   vec3 c = vec3(.001 * tan(dot(pos_loc.x, pos_loc.y))) + 0.005 * pos_loc.y;
    vec3 other = mix(vec3(.2,.01,.01), vec3(.01,.01,.1), 1. - t * t);
    return mix(c, other, 0.);
 }
 
-#define N 8
-void main() {
+uniform float pposx, pposy;
+
+#define EPSILON .5
+#define SCALE -5.
+
+void main() 
+{
+   // UNUSED
    // if (uTime == 0.) {
    //    gl_FragColor = vec4(sqrt(vec3(0., 0., 0.)), 1.); 
    // } else {
@@ -129,10 +64,16 @@ void main() {
    //    c = mix(vec3(0.2,.02,.045), c, .5+.5 * vPos.y);
    // vec3 c = backgroundColor(vec3(0.)) + .01 * noise(vPos) - .1 - vec3(.05,.12,.3);
    //    c = mix(vec3(0.2,.02,.045), c, .5+.5 * vPos.y);
+   // sin(craft.ypos) * 0.09
+   
+   // ATTEMPT TO BE ABLE TO MOVE HORIZON WITH PATH,
+   // BUT SEEMS TO WORSEN THE PERSPECTIVE EFFECT,
+   // WOULD REQUIRE MORE TESTING
+   // vec3 pos_loc = vec3(vPos.x, (vPos.y + (sin(-pposy) * (SCALE)) + EPSILON), vPos.z);
+   #define pos_loc vec3(vPos.x, vPos.y + sin(uTime * 0.0001), vPos.z)
 
-
-   vec3 c = backgroundColor(vec3(0.)) + .01 * noise(vPos) - .1 - vec3(.05,.12,.3);
-   c = mix(vec3(0.2,.02,.045), c, .5+.5 * vPos.y) + min(log(uTime), .001);
+   vec3 c = backgroundColor(vec3(0.), pos_loc) + .01 * noise(pos_loc) - .1 - vec3(.05,.12,.3);
+   c = mix(vec3(0.2,.02,.045), c, .5+.5 * pos_loc.y) + min(log(uTime), .001);
       //c = vPos + sin(uTime);
    gl_FragColor = vec4(sqrt(c), 1.);           // Final pixel color
    // }
@@ -362,7 +303,10 @@ uniform float uTime, uTimePrev; \n\
 
    //////////////////////////////////////////////////////////
 
-   function createVoxelLayer(where) {
+   function createVoxelLayer(where, z) {
+      if (z === undefined) {
+         z = 0;
+      }
       var voxels = new SceneObject();
       let yLen = where.length;
       let xLen = where[0].length;
@@ -377,12 +321,39 @@ uniform float uTime, uTimePrev; \n\
             for (let v = 0; v < vertices.length; v += 8) {
                vertices[v] += ((2 * x) - (xLen - 1));
                vertices[v + 1] += ((2 * (yLen - 1 - y)) - (yLen - 1));
+               vertices[v + 2] += (2 * z);
             }
             Array.prototype.push.apply(allVertices, vertices);
          }
       }
       voxels.setVertices(allVertices);
       return voxels;
+   }
+
+   function createVoxelLayerVerticesOnly(where, z) {
+      if (z === undefined) {
+         z = 0;
+      }
+      var voxels = new SceneObject();
+      let yLen = where.length;
+      let xLen = where[0].length;
+      let allVertices = [];
+      for (let y = yLen - 1; y >= 0; y--) {
+         for (let x = 0; x < xLen; x++) {
+            if (where[y][x] == 0) {
+               continue;
+            }
+
+            let vertices = SHAPE.cube();
+            for (let v = 0; v < vertices.length; v += 8) {
+               vertices[v] += ((2 * x) - (xLen - 1));
+               vertices[v + 1] += ((2 * (yLen - 1 - y)) - (yLen - 1));
+               vertices[v + 2] += (2 * z);
+            }
+            Array.prototype.push.apply(allVertices, vertices);
+         }
+      }
+      return allVertices;
    }
 
    var uLights;
@@ -543,6 +514,10 @@ var DEL_PATH = (function() {
    return operation;
 }());
 
+function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 // unused so far
 var path_remove_check = new TimeEventResponse(0.06, DEL_PATH);
 
@@ -559,9 +534,17 @@ var bgGeoTransCount = 0;
 var removedBlast = false;
 var restoreLights = false;
 
+var doSpawnGate = false;
+var timeSinceGateRespawn = 0;
+var timeOffset = -1;
+
+
 gl_start(canvas1,
    function(time, prevTime) {
       craft.updatePos(xInc, yInc, Constants.MAX_X, Constants.MAX_Y);
+      PLAYER_INFO.xPos = craft.xpos;
+      PLAYER_INFO.yPos = craft.ypos;
+
       time *= timeScale;
       M.identity(m);
 
@@ -595,7 +578,8 @@ gl_start(canvas1,
          // M.translate(m, [0, 0, time -PROJECTION.far / 2]);
          if (!removedBlast) {
             M.rotateY(m, skew_);
-            M.rotateX(m, Math.sin(-craft.ypos) * 0.09);
+            // X ROTATION DISABLED FOR NOW
+            // M.rotateX(m, Math.sin(-craft.ypos) * 0.09);
             M.translate(m, [0, 0, -(f * 2.0)]);
 
             //M.scale(m, 30.);
@@ -621,6 +605,7 @@ gl_start(canvas1,
                   //    M.rotateY(m, skew_);
          
          M.scale(m, 60);
+
          //M.rotateX(m, Math.sin(craft.ypos) * 0.09);
          // M.translate(m, [0, 0, time -PROJECTION.far / 2]);
 
@@ -648,7 +633,8 @@ gl_start(canvas1,
 
             let movingFloor = floors[f];
             M.rotateZ(m, Math.sin(craft.xpos) * 0.09);
-            M.rotateX(m, Math.sin(-craft.ypos) * 0.09);
+            // X ROTATION DISABLED FOR NOW
+            // M.rotateX(m, Math.sin(-craft.ypos) * 0.09);
 
             if (stopTestAnimation && !restoreLights) {
                let minAngle = Math.min(time - retTime, 2 * Math.PI);
@@ -668,15 +654,76 @@ gl_start(canvas1,
       }
 
       M.save(m);
-                        M.rotateY(m, skew_);
-                        M.rotateZ(m, Math.sin(craft.xpos) * 0.09);
-                        M.rotateX(m, Math.sin(-craft.ypos) * 0.09);
-               M.scale(m, .5);
 
+               if (time > 20) {
+                  if (!doSpawnGate && timeOffset < 0) {
+                     timeOffset = getRandomInt(7, 9);
+                     doSpawnGate = true;
+
+
+                     let numRows = getRandomInt(3, 20);
+                     let pattern = [
+                     ];
+
+                     let isEven = numRows % 2 == 0;
+                     let top = [];
+                     for (let r = 0; r < numRows; r++) {
+                        top.push(0);
+                     }
+                     if (isEven) {
+                        let offCenter = numRows / 2;
+                        for (let col = offCenter - 2; col < offCenter + 2; col++) {
+                           top[col] = 1;
+                        }
+                     }
+                     else {
+                        let center = Math.floor(numRows / 2);
+                        top[center - 1] = 1;
+                        top[center] = 1;
+                        top[center + 1] = 1;
+                     }
+                     pattern.push(top);
+
+                     let base = [];
+                     for (let r = 0; r < numRows; r++) {
+                        base.push(0);
+                     }
+                     if (isEven) {
+                        let offCenter = numRows / 2;
+                        base[offCenter + 1] = 1;
+                        base[offCenter - 2] = 1;
+                     }
+                     else {
+                        let center = Math.floor(numRows / 2);
+                        base[center - 1] = 1;
+                        base[center + 1] = 1;
+                     }
+
+                     for (let r = 0; r < numRows - 1; r++) {
+                        pattern.push(base);
+                     }
+
+                     testPoly.setVertices(createVoxelLayerVerticesOnly(pattern));
+                  }
+                  else {
+                     timeOffset -= (time - prevTime);
+                  }
+               }
+
+               if (doSpawnGate) {
+                  timeSinceGateRespawn = time;
+                  doSpawnGate = false;
+               }
+
+               M.rotateY(m, skew_);
+               M.rotateZ(m, Math.sin(craft.xpos) * 0.09);
+               // X ROTATION DISABLED FOR NOW
+               // M.rotateX(m, Math.sin(-craft.ypos) * 0.09);
+               M.scale(m, .5);
                // M.translate(m, [0, 0, (18.5 * time) - (PROJECTION.far * 3)]);
-               M.translate(m, [0, 0, -(18.5 * time) + (PROJECTION.far * 3)]);
+               M.translate(m, [0, 0, -(18.5 * (time - timeSinceGateRespawn)) + (PROJECTION.far * 3)]);
                M.translate(m, [0, 0, -1.5]);
-      testPoly.setMatrix(m);
+               testPoly.setMatrix(m);
       M.restore(m);
 
       // path_remove_check.update();

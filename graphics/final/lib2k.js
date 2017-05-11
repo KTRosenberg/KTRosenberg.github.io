@@ -133,6 +133,9 @@ function SceneObject(vertices) {
 
    this.setVertices = function(vertices) {
       this.vertices = vertices;
+      if (this.gl) {
+         this.vertexData = new Float32Array(this.vertices);
+      }
    }
 
    this.setMaterial = function(material) {
@@ -210,6 +213,14 @@ var PROJECTION = (function() {
    return p;
 }());
 
+var PLAYER_INFO = (function() {
+   var pinfo = {
+      xPos : 0.0,
+      yPos : 0.0
+   };
+   return pinfo;
+}());
+
 function gl_start(canvas, update) {           // START WEBGL RUNNING IN A CANVAS
    try { 
       canvas.gl = canvas.getContext('experimental-webgl');                 // Make sure WebGl is supported.
@@ -251,6 +262,11 @@ function gl_start(canvas, update) {           // START WEBGL RUNNING IN A CANVAS
             gl.uniform1f(timeAddress, time);
             var prevTimeAddress = gl.getUniformLocation(program,"uTimePrev");
             gl.uniform1f(prevTimeAddress, prevTime);
+            
+            var playerPosXAddress = gl.getUniformLocation(program, "pposx");
+            gl.uniform1f(playerPosXAddress, PLAYER_INFO.xPos);
+            var playerPosYAddress = gl.getUniformLocation(program, "pposy");
+            gl.uniform1f(playerPosYAddress, PLAYER_INFO.yPos);
 
             // var TEST = gl.getUniformLocation(program, "REMOVEME");
             // gl.uniform1f(TEST, 1.);
