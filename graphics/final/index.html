@@ -70,7 +70,7 @@ void main()
    // BUT SEEMS TO WORSEN THE PERSPECTIVE EFFECT,
    // WOULD REQUIRE MORE TESTING
    // vec3 pos_loc = vec3(vPos.x, (vPos.y + (sin(-pposy) * (SCALE)) + EPSILON), vPos.z);
-   #define pos_loc vec3(vPos.x, vPos.y + sin(uTime * 0.0001), vPos.z)
+   #define pos_loc vec3(vPos.x, vPos.y /*+ sin(uTime * 0.0001)*/, vPos.z)
 
    vec3 c = backgroundColor(vec3(0.), pos_loc) + .01 * noise(pos_loc) - .1 - vec3(.05,.12,.3);
    c = mix(vec3(0.2,.02,.045), c, .5+.5 * pos_loc.y) + min(log(uTime), .001);
