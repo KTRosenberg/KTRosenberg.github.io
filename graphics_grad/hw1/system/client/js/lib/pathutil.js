@@ -1,6 +1,6 @@
 "use strict";
 
-let MY_ROOT_PATH = "";
+window.MY_ROOT_PATH = "";
 function getPath(path) {
   	if (!path || path.length < 1) {
     	return;

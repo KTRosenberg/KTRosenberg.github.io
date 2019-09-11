@@ -1,6 +1,6 @@
 "use strict"
 
-const assetutil = (function() {
+window.assetutil = (function() {
 	
 	const _out = {};
 

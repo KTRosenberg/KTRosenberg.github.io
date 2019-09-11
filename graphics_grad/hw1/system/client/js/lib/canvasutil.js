@@ -1,6 +1,6 @@
 "use strict";
 
-const CanvasUtil = (function() {
+window.CanvasUtil = (function() {
 	function resizeToDisplaySize(canvas, scale = 1) {
 	  const realToCSSPixels = window.devicePixelRatio;
 
