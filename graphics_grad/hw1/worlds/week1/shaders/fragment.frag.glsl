@@ -18,7 +18,7 @@ void main() {
   float blue  = max(0., sin(5. * uTime));
   
   // R,G,B EACH RANGE FROM 0.0 TO 1.0  
-  vec3 color = vec3(red, 0.0, blue);
+  vec3 color = vec3(red, green, blue);
     
   // THIS LINE OUTPUTS THE FRAGMENT COLOR
   fragColor = vec4(sqrt(color), 1.0);
