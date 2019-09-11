@@ -67,7 +67,7 @@ default: {
     // frees gl resources upon world switch
     glDoResourceTracking   : true,
     glEnableEditorHook     : true,
-    enableMultipleWorlds   : false,
+    enableMultipleWorlds   : true,
     enableEntryByButton    : true,
     enableBellsAndWhistles : false,
     // main() is the system's entry point
