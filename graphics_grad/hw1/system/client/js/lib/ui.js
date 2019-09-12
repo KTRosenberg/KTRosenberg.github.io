@@ -97,3 +97,6 @@
 
     }
   }
+
+  window.Menu = Menu;
+  window.MenuItem = MenuItem;

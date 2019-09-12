@@ -8,9 +8,11 @@ function getPath(path) {
 
   	return MY_ROOT_PATH + path;
 }
+window.getPath = getPath;
 function setPath(path) {
   	MY_ROOT_PATH = path;
 }
+window.setPath = setPath;
 
 function getCurrentPath(path) {
     let slashIdx = path.lastIndexOf('/');
@@ -20,3 +22,4 @@ function getCurrentPath(path) {
 
     return path.substring(0, slashIdx + 1);
 }
+window.getCurrentPath = getCurrentPath;
