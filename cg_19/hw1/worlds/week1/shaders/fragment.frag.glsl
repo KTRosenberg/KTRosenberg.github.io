@@ -7,7 +7,7 @@ in vec3 vPos;     // -1 < vPos.x < +1
 //      vPos.z == 0
 
 out vec4 fragColor; 
- 
+
 void main() {
 
   // HERE YOU CAN WRITE ANY CODE TO
