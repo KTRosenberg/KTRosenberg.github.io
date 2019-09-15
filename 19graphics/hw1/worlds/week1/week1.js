@@ -40,6 +40,7 @@ async function setup(state) {
                     output[0],
                     output[1]
                 );
+
                 // MREditor.createShaderProgramFromStringsAndHandleErrors(
                 //     output[0],
                 //     output[1]

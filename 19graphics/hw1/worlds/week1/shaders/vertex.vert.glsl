@@ -9,7 +9,8 @@ out       vec3 vPos;
 
 uniform   float uTime;
 
-void main() {
-  gl_Position = /*uProj * uView * uModel * */ vec4(aPos * 1.0, 1.);
-  vPos = aPos;
+void main(void) 
+{
+    gl_Position = /*uProj * uView * uModel * */ vec4(aPos * 1.0, 1.);
+    vPos = aPos;
 }
