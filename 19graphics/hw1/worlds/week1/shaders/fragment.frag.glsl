@@ -35,12 +35,22 @@ vec3 circle(vec2 radius, vec2 delta, vec2 pos)
     )); 
 }
 
+const bool pixelated = true;
+
 void main(void) 
 {
     const vec2 res = vec2(640.0, 640.0);
     float aspect = res.x / res.y;
     vec3 vposloc = vPos;
     vposloc.x *= aspect;
+
+    if (pixelated) {
+        vec3 pxscale = vec3(vec2(32.0), 1.0); 
+        vposloc *= pxscale;
+        vposloc = floor(vposloc);
+        vposloc /= pxscale;
+    }
+
     vec3 vpos01 = vec3(to01(vposloc.x), to01(vposloc.y), vposloc.z);
     
 
