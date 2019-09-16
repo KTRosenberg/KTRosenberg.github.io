@@ -56,7 +56,7 @@ void main(void)
 
     // find the current step
     int time_clamp = int(uTime / 2.0) % COUNT_STEPS;
-    //time_clamp = 11;
+    time_clamp = 11;
     // create base noise texture
 
     float base_noise = noise(vposloc * 4.0 + vec3(sin(0.0 / 2.0) * 0.1, -2.0 * uTime, 0.7));
@@ -132,5 +132,5 @@ BREAK(10);
 BREAK(11);
 
     vec3 sun = (1.0 - curve_edge) * bg * circle(vec2(0.1), vec2(0.5, 0.5), vposloc.xy + -0.5);
-    fragColor = vec4(gamma_correct(sun + ((1.0 - curve_edge) * bg + curve_edge * orange_or_prev)), 1.0);
+    fragColor = vec4(gamma_correct(sun + ((1.0 - curve_edge) * bg + curve_edge * 4.0 * orange_or_prev)), 1.0);
 }
