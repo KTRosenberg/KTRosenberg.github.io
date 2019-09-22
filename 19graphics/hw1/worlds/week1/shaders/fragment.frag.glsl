@@ -39,6 +39,7 @@ const bool pixelated = true;
 
 void main(void) 
 {
+
     const vec2 res = vec2(640.0, 640.0);
     float aspect = res.x / res.y;
     vec3 vposloc = vPos;
@@ -56,7 +57,7 @@ void main(void)
 
     // find the current step
     int time_clamp = int(uTime / 2.0) % COUNT_STEPS;
-    time_clamp = 11;
+    //time_clamp = 11;
     // create base noise texture
 
     float base_noise = noise(vposloc * 4.0 + vec3(sin(0.0 / 2.0) * 0.1, -2.0 * uTime, 0.7));
