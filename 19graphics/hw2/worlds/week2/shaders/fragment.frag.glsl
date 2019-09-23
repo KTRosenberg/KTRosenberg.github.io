@@ -169,7 +169,82 @@ vec3 reflection(vec3 I, vec3 N)
 }
 
 #define PLANE_DISTORTION
+#define DEFAULT_INIT (0)
 
+#if (DEFAULT_INIT == 1)
+void init(void)
+{
+
+// initialize world lights
+    d_light_count = 2;
+    d_light[0] = Dir_Light(
+        vec3(1., 1., 1.),
+        normalize(vec3(1., 1., .5))
+    );
+    d_light[1] = Dir_Light(
+        vec3(.1, .07, .05),
+        normalize(vec3(-1., 0.,-2.))
+    );
+
+    ambient = vec4(0.045, 0.02, 0.01, 1.0);
+
+// initialize spheres
+
+
+    float smv = 0.5 * sin(2.0 * uTime);
+
+    sphere_count = 2;
+    spheres[0] = Sphere(
+        vec3(.2, 0., 0.),
+        0.3,
+        Material(
+           vec3(0.,.1,.1),
+           vec3(0., .5, .5),
+           vec3(0., 1., 1.),
+           10.0
+        )
+    );
+
+    spheres[1] = Sphere(
+        vec3(-.6,.4,-.1),
+        0.1,
+        Material(
+           vec3(.1,.1,0.),
+           vec3(.5,.5,0.),
+           vec3(1.,1.,1.),
+           20.
+        )
+    );
+
+    spheres[2] = Sphere(
+        vec3(0.,-.5, -4.0) + vec3(cos(uTime), 0.0, sin(uTime)),
+        0.5,
+        Material(
+            vec3(0.,.1,.1),
+            vec3(1,.7,0.),
+            vec3(1,.7,0.),
+            10.0
+        )
+    );
+
+// instantiate planes
+   // make the plane react to the position
+   // of the yellow sphere
+   
+
+   plane_count = 0;
+   planes[0] = Plane(
+       vec3(0.0,-1.0, 0.0),
+       vec3(0.0, 1.0, 0.0),
+       Material(
+          vec3(0.,.1,.1),
+          vec3(0.,.1,.1),
+          vec3(0.,.1,.1),
+          1.0
+       )
+   );
+}
+#else 
 void init(void)
 {
 
@@ -177,11 +252,11 @@ void init(void)
     d_light_count = 2;
     d_light[0] = Dir_Light(
         vec3(.5,.5,1.0),
-        normalize(vec3(1.,1.,1.))
+        normalize(vec3(1.,1. + sin01(uTime),1.))
     );
     d_light[1] = Dir_Light(
         vec3(.2,.1,.1),
-        normalize(vec3(-1.,-1.,-1.))
+        normalize(vec3(0.,1.,0.))
     );
 
     ambient = vec4(0.045, 0.02, 0.01, 1.0);
@@ -193,8 +268,8 @@ void init(void)
 
     sphere_count = 3;
     spheres[0] = Sphere(
-        vec3(-1.0, 0.4, -4.0 + smv),
-        0.5 + abs(noise(vec3(vPos.xy * sin(uTime), 0.0))), // NOTE: this doesn't affect the reflections -- would need to do transformation based on raytraced point
+        vec3(0.0 - sin(uTime), 1.5, 5.0 * sin(uTime)),
+        0.5 ,//+ abs(noise(vec3(vPos.xy * sin(uTime), 0.0))), // NOTE: this doesn't affect the reflections -- would need to do transformation based on raytraced point
         Material(
            vec3(0.,.1,.1),
            vec3(1.0, 0.3, 0.3),
@@ -242,6 +317,8 @@ void init(void)
        )
    );
 }
+#endif
+
 bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
 {    
     vec3 color = ambient.rgb;
@@ -300,7 +377,7 @@ bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
             rt_hit = rt_res[result_idx];
         }
 
-        eye_dir = -normalize(rt_hit.point);
+        eye_dir = -ray.W;
 
         color += calc_phong_lighting(
             rt_hit, 
@@ -311,6 +388,7 @@ bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
         );
 
         intensity *= 0.8;
+
 
         origin    = rt_hit.point + RT_EPSILON * ray.W;
         direction = reflection(-ray.W, rt_hit.normal);
@@ -507,7 +585,7 @@ vec3 calc_phong_lighting(Raytrace_Result res, Material mat, vec3 bg_color, vec3 
         vec3 L = (d_light[i].dir);
 
         float dist = RAYTRACE_OUTOFBOUNDS;
-        Ray ray = Ray(res.point + (N * RT_EPSILON), L);
+        Ray ray = Ray(res.point + (eye_dir * RT_EPSILON), L);
         Raytrace_Result rt_res;
 
         // raytrace to spheres
@@ -515,8 +593,12 @@ vec3 calc_phong_lighting(Raytrace_Result res, Material mat, vec3 bg_color, vec3 
             !raytrace_planes_shadow(ray, rt_res)) 
         {
             float diffuse = max(0.0, dot(N, L));
-            vec3 R = reflection(N, L); // reflection vector about the normal
-            float specular = pow(max(0.0, dot(eye_dir, R)), mat.spec_pow);
+            vec3 R = reflection(L, N); // reflection vector about the normal
+            
+            // get the bisector between the normal and the light direction
+            vec3 bisector_N_L = (eye_dir + L) / length(eye_dir + L);
+
+            float specular = pow(max(0.0, dot(bisector_N_L, R)), mat.spec_pow);
             color += intensity * d_light[i].color * ((mat.diffuse * diffuse) + (mat.specular * specular));
         }
     }
