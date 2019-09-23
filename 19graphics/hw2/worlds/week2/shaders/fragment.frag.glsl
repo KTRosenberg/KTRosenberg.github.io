@@ -194,7 +194,7 @@ void init(void)
     sphere_count = 3;
     spheres[0] = Sphere(
         vec3(-1.0, 0.4, -4.0 + smv),
-        0.5 + abs(noise(vec3(vPos.xy * sin(uTime), 0.0))),
+        0.5 + abs(noise(vec3(vPos.xy * sin(uTime), 0.0))), // NOTE: this doesn't affect the reflections -- would need to do transformation based on raytraced point
         Material(
            vec3(0.,.1,.1),
            vec3(1.0, 0.3, 0.3),
