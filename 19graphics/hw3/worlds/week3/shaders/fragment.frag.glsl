@@ -295,227 +295,31 @@ void init(void)
    }
 }
 
-
-
-bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
-{    
-    vec3 color = ambient.rgb;
-    vec3 eye_dir;
-
-    vec3 origin = vec3(0.0, 0.0, conf.focal_len); // V: observer position
-    vec3 direction = normalize(                   // W: direction of ray to pixel
-        vec3(conf.pos.xy, -conf.focal_len)
-    );
-
-    Raytrace_Result rt_res[RT_TYPE_COUNT];
-    Raytrace_Result rt_hit;
-    
-    int result_idx;
-
-    Ray ray;
-    bool hit;
-    float intensity = 1.0;
-    for (int recursion_depth = 0; 
-        recursion_depth < RT_MAX_RECURSION_DEPTH + 1; 
-        recursion_depth += 1) 
-    {
-        hit = false;
-
-        Ray_init(ray, origin, direction);
-
-        float dist     = RAYTRACE_OUTOFBOUNDS;
-        float out_dist = RAYTRACE_OUTOFBOUNDS;
-
-        Material hit_material;
-
-        int which = 0;
-
-        if (raytrace_spheres(ray, rt_res[RT_TYPE_SPHERE])) {
-            hit = true;
-
-            if (rt_res[RT_TYPE_SPHERE].t < dist) {
-                result_idx   = RT_TYPE_SPHERE;
-                rt_hit       = rt_res[RT_TYPE_SPHERE];
-
-                dist         = rt_hit.t;
-                out_dist     = rt_hit.t2;
-                hit_material = rt_hit.mat;
-                which        = rt_hit.index;
-            }
-        }
-
-        if (raytrace_planes(ray, rt_res[RT_TYPE_PLANE])) {
-            hit = true;
-
-            if (rt_res[RT_TYPE_PLANE].t < dist) {
-                result_idx   = RT_TYPE_PLANE;
-                rt_hit       = rt_res[RT_TYPE_PLANE];
-
-                dist         = rt_hit.t;
-                out_dist     = rt_hit.t2;
-                hit_material = rt_hit.mat;
-                which        = rt_hit.index;
-            }
-        }
-
-        if (!hit) {
-            color += ambient.rgb * 0.25;
-            break;
-        }
-
-        eye_dir = -ray.W;
-
-        color += calc_phong_lighting(
-            rt_hit, 
-            hit_material,  
-            ambient.rgb, 
-            eye_dir,
-            intensity
-        );
-
-
-        #define refract(incident, normal, refraction_ratio) refract(incident, normal, refraction_ratio)
-        if (false && should_refract(hit_material)) {
-            vec3  P  = rt_hit.point;
-            vec3  N  = rt_hit.normal;
-            vec3  W  = ray.W;
-            float t  = dist;
-            float t2 = out_dist;
-
-            // assume initial medium is air and use 1.0
-            float refract_idx_extern = 1.0;
-            float refract_idx_intern = refractive_index_of(hit_material);
-
-            // compute the refracted ray
-
-            float refract_idx_before = refract_idx_extern;
-            float refract_idx_after  = refract_idx_intern;
-
-            float index_of_refraction = refract_idx_before / refract_idx_after;
-
-            // TEMP use glsl's function
-            vec3 transmission_direction = refract(W, N, index_of_refraction);
-            vec3 transmission_origin    = P + (RT_EPSILON * transmission_direction);
-
-            // from the lesson
-            vec3 W_c   = dot(W, N) * N;
-            vec3 W_s   = W - W_c;
-            vec3 W_s_p = W_s / index_of_refraction;
-            vec3 W_c_p = -N * sqrt(1.0 - dot(W_s_p, W_s_p));
-            //transmission_direction = W_c_p + W_s_p;
-
-            // implementation of glsl refract()
-            // {
-            //     float N_dot_W = dot(N, W);
-            //     float k = 1.0 - index_of_refraction * index_of_refraction * (1.0 - N_dot_W * N_dot_W);
-            //     transmission_direction = (k < 0.0) ? 
-            //         vec3(0.0) : 
-            //         index_of_refraction * W - (index_of_refraction * N_dot_W  + sqrt(k)) * N;
-            // }
-            // if (transmission_direction == vec3(0.0)) {
-            //     break;
-            // }
-
-            bool outside = dot(W, N) < 0.0;
-            transmission_origin = (outside) ? 
-                P - (RT_EPSILON * N) : 
-                P + (RT_EPSILON * N);
-
-            // put the ray into the next recursion step:
-
-            origin    = transmission_origin;
-            direction = normalize(transmission_direction);
-
-            // This would be if I wanted to do something fancy
-            // with simulated recursion and total internal reflection
-            // vec3 transmission;
-
-            // float theta = clamp(-1.0, 1.0, dot(N, W));
-
-            // if (theta < 0.0) {
-            //     // outside
-            //     theta = -theta;
-            // } else {
-            //     // inside
-
-            //     // switch normal and refraction indices
-            //     N = -N;
-
-            //     float temp = ior_before;
-            //     ior_before = ior_after;
-            //     ior_after  = temp;
-            // }
-
-            // float ratio = ior_before / ior_after;
-
-            // float crit_angle_check = 1.0 - ratio * ratio * (1.0 - theta * theta);
-            // vec3 output_ray = vec3(0.0);
-            // if (crit_angle_check < 0.0) {
-            //     // cancel refraction
-            // } else {
-            //     output_ray = ratio * W + (ratio * theta - sqrt(crit_angle_check)) * N;
-            // }
-        }
-
-        // TEMP Control Flow, will revise
-        const bool enable_reflection = true;
-        if (enable_reflection && should_reflect(hit_material)) {
-            origin    = rt_hit.point + RT_EPSILON * ray.W;
-            direction = reflection(-ray.W, rt_hit.normal);
-            intensity *= 0.8;
-        } else {
-
-            break;
-        }
-
-    }
-
-    res.hit = hit;
-    res.color = color;
-    return res.hit;
-}
-
-
-#define OLD_RT_SPHERE (0)
-
-#if (OLD_RT_SPHERE)
-    #define raytrace_sphere(t, ray_, S) do { \
-        vec3 V = ray_.V - S.center; \
-        float B = 2. * dot(V, ray_.W); \
-        float C = dot(V, V) - S.r * S.r; \
-        float discrim = B*B - 4.*C; \
-        if (discrim == 0.0) { \
-             t = -B / 2.0;                      \
-        } else if (discrim > 0.0) {\
-             t = min(-B + discrim, -B - discrim) / 2.0; \
-        }\
-    } while (false)
-#else
-    #define raytrace_sphere(t, t2, ray_, S) do { \
-        vec3 origin = ray_.V - S.center; \
-        float dir_dot_origin = dot(ray_.W, origin); \
+#define raytrace_sphere(t, t2, ray_, S) do { \
+    vec3 origin = ray_.V - S.center; \
+    float dir_dot_origin = dot(ray_.W, origin); \
+    \
+    float discrim = (dir_dot_origin * dir_dot_origin) - \
+                    dot(origin, origin) + \
+                    (S.r * S.r); \
+    \
+    if (discrim >= 0.0 && discrim < RT_EPSILON) { \
+        t = -dir_dot_origin; \
+    } else if (discrim >= RT_EPSILON) { \
+        float sqroot = sqrt(discrim); \
         \
-        float discrim = (dir_dot_origin * dir_dot_origin) - \
-                        dot(origin, origin) + \
-                        (S.r * S.r); \
-        \
-        if (discrim >= 0.0 && discrim < RT_EPSILON) { \
-            t = -dir_dot_origin; \
-        } else if (discrim >= RT_EPSILON) { \
-            float sqroot = sqrt(discrim); \
-            \
-            float t1_ = -dir_dot_origin + sqroot; \
-            float t2_ = -dir_dot_origin - sqroot; \
-            if (t1_ < t2_) { \
-                t = t1_; \
-                t2 = t2_; \
-            } else { \
-                t = t2_; \
-                t2 = t1_; \
-            } \
+        float t1_ = -dir_dot_origin + sqroot; \
+        float t2_ = -dir_dot_origin - sqroot; \
+        if (t1_ < t2_) { \
+            t = t1_; \
+            t2 = t2_; \
+        } else { \
+            t = t2_; \
+            t2 = t1_; \
         } \
-    } while (false)
-#endif
+    } \
+} while (false)
+
 
 
 bool raytrace_spheres(RT_SPHERE_PARAM_LIST) 
@@ -704,5 +508,170 @@ vec3 calc_phong_lighting(Raytrace_Result res, Material mat, vec3 bg_color, vec3 
     return color;
 }
 
+vec3 refract_simple(vec3 W, vec3 N, float index_of_refraction) {
+    // parallel to N
+    vec3 W_c   = dot(W, N) * N;
+    // orthogonal to N
+    vec3 W_s   = W - W_c;
+    // component of emergent ray orthogonal to N
+    vec3 W_s_p = W_s / index_of_refraction;
+    // component of emergent ray parallel to N
+    vec3 W_c_p = -N * sqrt(1.0 - dot(W_s_p, W_s_p));
+    // result
+    return normalize(W_c_p + W_s_p);
+}
 
+
+        // bool refraction_happened = false;
+        // if (false && should_refract(hit_material)) {
+        //     vec3  P  = rt_hit.point;
+        //     vec3  N  = rt_hit.normal;
+        //     vec3  W  = ray.W;
+        //     float t  = dist;
+        //     float t2 = out_dist;
+
+        //     // compute the refracted ray
+        //     float refract_idx_before = 1.0;
+        //     float refract_idx_after  = refractive_index_of(hit_material);
+
+        //     float index_of_refraction = refract_idx_before / refract_idx_after;
+        //     float index_of_refraction_inv = 1.0 / index_of_refraction;
+
+        //     Ray ray_refract;
+        //     vec3 transmission_origin = vec3(0.0);
+        //     vec3 transmission_direction = vec3(0.0); 
+        //     {
+        //         // create the first bent ray
+        //         transmission_direction = refract_simple(W, N, index_of_refraction);
+        //         transmission_origin    = P - (RT_EPSILON * transmission_direction);
+
+        //         Ray_init(ray_refract, transmission_origin, transmission_direction);
+
+        //         switch (result_idx) {
+        //         case RT_TYPE_SPHERE: {
+        //             refraction_happened = true;
+
+        //             float t  = RAYTRACE_OUTOFBOUNDS;
+        //             float t2 = RAYTRACE_OUTOFBOUNDS;
+        //             raytrace_sphere(t, t2, ray_refract, spheres[which]);
+
+        //             // create the second bent ray
+        //             vec3 hit_point  = (ray_refract.V + (t2 * ray_refract.W));
+        //             vec3 hit_normal = normalize(hit_point - spheres[which].center);
+
+        //             transmission_direction = refract_simple(ray_refract.W, hit_normal, index_of_refraction_inv);
+        //             transmission_origin    = hit_point + (RT_EPSILON * transmission_direction);
+
+        //             // defer to next depth level
+        //             origin    = transmission_origin;
+        //             direction = transmission_direction;
+
+        //             break;
+        //         }
+        //         case RT_TYPE_PLANE: {
+        //             refraction_happened = false;
+
+        //             break;
+        //         }
+        //         }
+        //     }
+
+        //     // TEMP
+        //     // either refract or reflect, but not both
+        //     if (refraction_happened) {
+        //         continue;
+        //     }
+        // }
+
+bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
+{    
+    vec3 color = ambient.rgb;
+    vec3 eye_dir;
+
+    vec3 origin = vec3(0.0, 0.0, conf.focal_len); // V: observer position
+    vec3 direction = normalize(                   // W: direction of ray to pixel
+        vec3(conf.pos.xy, -conf.focal_len)
+    );
+
+    Raytrace_Result rt_res[RT_TYPE_COUNT];
+    Raytrace_Result rt_hit;
+    
+    int result_idx;
+
+    Ray ray;
+    bool hit;
+    float intensity = 1.0;
+    for (int recursion_depth = 0; 
+        recursion_depth < RT_MAX_RECURSION_DEPTH + 1; 
+        recursion_depth += 1) 
+    {
+        hit = false;
+
+        Ray_init(ray, origin, direction);
+
+        float dist     = RAYTRACE_OUTOFBOUNDS;
+        float out_dist = RAYTRACE_OUTOFBOUNDS;
+
+        Material hit_material;
+
+        int which = 0;
+
+        if (raytrace_spheres(ray, rt_res[RT_TYPE_SPHERE])) {
+            hit = true;
+
+            if (rt_res[RT_TYPE_SPHERE].t < dist) {
+                result_idx   = RT_TYPE_SPHERE;
+                rt_hit       = rt_res[RT_TYPE_SPHERE];
+
+                dist         = rt_hit.t;
+                out_dist     = rt_hit.t2;
+                hit_material = rt_hit.mat;
+                which        = rt_hit.index;
+            }
+        }
+
+        if (raytrace_planes(ray, rt_res[RT_TYPE_PLANE])) {
+            hit = true;
+
+            if (rt_res[RT_TYPE_PLANE].t < dist) {
+                result_idx   = RT_TYPE_PLANE;
+                rt_hit       = rt_res[RT_TYPE_PLANE];
+
+                dist         = rt_hit.t;
+                out_dist     = rt_hit.t2;
+                hit_material = rt_hit.mat;
+                which        = rt_hit.index;
+            }
+        }
+
+        if (!hit) {
+            color += ambient.rgb * 0.25;
+            break;
+        }
+
+        eye_dir = -ray.W;
+
+        color += calc_phong_lighting(
+            rt_hit, 
+            hit_material,  
+            ambient.rgb, 
+            eye_dir,
+            intensity
+        );
+
+        // TEMP Control Flow, will revise
+        const bool enable_reflection = true;
+        if (enable_reflection && should_reflect(hit_material)) {
+            origin    = rt_hit.point + RT_EPSILON * ray.W;
+            direction = reflection(-ray.W, rt_hit.normal);
+            intensity *= 0.8;
+        } else {
+            break;
+        }
+    }
+
+    res.hit = hit;
+    res.color = color;
+    return res.hit;
+}
 
