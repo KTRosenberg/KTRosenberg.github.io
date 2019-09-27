@@ -35,11 +35,23 @@ const int   RT_MAX_RECURSION_DEPTH = 5;
 // types
 
 struct Material {
-    vec3 ambient;
-    vec3 diffuse;
-    vec3 specular;
+    vec3  ambient;
+    vec3  diffuse;
+    vec3  specular;
     float spec_pow;
+    
+    vec4  reflection; // mirror rgb, .w is whether should reflect or not 
+    vec4  refraction; // transparency rgb, .w is index of refraction
 };
+
+#define should_reflect(mat_) mat_.reflection.w == 1.0
+#define should_refract(mat_) mat_.refraction.rgb != vec3(0.0)
+#define reflection_color(mat_) mat_.reflection.rgb
+#define refraction_color(mat_) mat_.refraction.rgb
+
+#define index_of_refraction(mat_) mat_.refraction.w
+#define NO_REFLECT vec4(0.0)
+#define NO_REFRACT vec2(0.0)
 
 struct Dir_Light {
     vec3 color;
@@ -63,10 +75,10 @@ struct Plane {
     Material mat;
 };
 
-#define MAX_SPHERE_COUNT  (4)
-#define MAX_PLANE_COUNT  (2)
-#define MAX_D_LIGHT_COUNT (4)
-#define MAX_P_LIGHT_COUNT (4)
+#define MAX_SPHERE_COUNT  (3)
+#define MAX_PLANE_COUNT  (1)
+#define MAX_D_LIGHT_COUNT (2)
+#define MAX_P_LIGHT_COUNT (1)
 
 #define RT_EPSILON (0.001)
 
@@ -89,14 +101,16 @@ struct Plane {
 const int RT_TYPE_SPHERE =  0;
 const int RT_TYPE_PLANE  =  1;
 const int RT_TYPE_MISS   = -1;
-const int RT_TYPE_COUNT  = 2;
+const int RT_TYPE_COUNT  =  2;
 
 struct Raytrace_Result {
-    float t;
-    vec3 normal;
-    vec3 point;
-    int type;
-    int index;
+    float    t;
+    float    t2;
+    vec3     normal;
+    vec3     point;
+    int      type;
+    int      index;
+    Material mat;
 };
 
 struct Raytrace_Pass_Output {
@@ -108,6 +122,7 @@ struct Raytrace_Config {
     vec3  pos;
     float focal_len;
 };
+//
 Raytrace_Config rt_conf;
 
 struct Ray {
@@ -164,87 +179,12 @@ vec3 reflection(vec3 I, vec3 N)
 {
     // built-in function does the reverse:
     // I - 2.0 * dot(N, I) * N
-      return normalize(reflect(-I, N));
-    //return 2.0 * dot(N, I) * N - I;
+    return normalize(reflect(-I, N));
+      //return normalize(2.0 * dot(N, I) * N - I);
 }
 
 #define PLANE_DISTORTION
-#define DEFAULT_INIT (0)
 
-#if (DEFAULT_INIT == 1)
-void init(void)
-{
-
-// initialize world lights
-    d_light_count = 2;
-    d_light[0] = Dir_Light(
-        vec3(1., 1., 1.),
-        normalize(vec3(1., 1., .5))
-    );
-    d_light[1] = Dir_Light(
-        vec3(.1, .07, .05),
-        normalize(vec3(-1., 0.,-2.))
-    );
-
-    ambient = vec4(0.045, 0.02, 0.01, 1.0);
-
-// initialize spheres
-
-
-    float smv = 0.5 * sin(2.0 * uTime);
-
-    sphere_count = 2;
-    spheres[0] = Sphere(
-        vec3(.2, 0., 0.),
-        0.3,
-        Material(
-           vec3(0.,.1,.1),
-           vec3(0., .5, .5),
-           vec3(0., 1., 1.),
-           10.0
-        )
-    );
-
-    spheres[1] = Sphere(
-        vec3(-.6,.4,-.1),
-        0.1,
-        Material(
-           vec3(.1,.1,0.),
-           vec3(.5,.5,0.),
-           vec3(1.,1.,1.),
-           20.
-        )
-    );
-
-    spheres[2] = Sphere(
-        vec3(0.,-.5, -4.0) + vec3(cos(uTime), 0.0, sin(uTime)),
-        0.5,
-        Material(
-            vec3(0.,.1,.1),
-            vec3(1,.7,0.),
-            vec3(1,.7,0.),
-            10.0
-        )
-    );
-
-// instantiate planes
-   // make the plane react to the position
-   // of the yellow sphere
-   
-
-   plane_count = 0;
-   planes[0] = Plane(
-       vec3(0.0,-1.0, 0.0),
-       vec3(0.0, 1.0, 0.0),
-       Material(
-          vec3(0.,.1,.1),
-          vec3(0.,.1,.1),
-          vec3(0.,.1,.1),
-          1.0
-       )
-   );
-}
-#else 
 void init(void)
 {
 
@@ -252,11 +192,11 @@ void init(void)
     d_light_count = 2;
     d_light[0] = Dir_Light(
         vec3(.5,.5,1.0),
-        normalize(vec3(1.,1. + sin01(uTime),1.))
+        normalize(-vec3(1.,1. + sin01(uTime),1.))
     );
     d_light[1] = Dir_Light(
         vec3(.2,.1,.1),
-        normalize(vec3(0.,1.,0.))
+        normalize(-vec3(0.,1.,0.))
     );
 
     ambient = vec4(0.045, 0.02, 0.01, 1.0);
@@ -271,10 +211,13 @@ void init(void)
         vec3(0.0 - sin(uTime), 1.5, 5.0 * sin(uTime)),
         0.5 ,//+ abs(noise(vec3(vPos.xy * sin(uTime), 0.0))), // NOTE: this doesn't affect the reflections -- would need to do transformation based on raytraced point
         Material(
-           vec3(0.,.1,.1),
-           vec3(1.0, 0.3, 0.3),
-           vec3(1.0, 0.3, 0.3),
-           2.0
+            vec3(0.,.1,.1),
+            vec3(1.0, 0.3, 0.3),
+            vec3(1.0, 0.3, 0.3),
+            2.0,
+
+            vec4(1.0, 1.0, 1.0, 1.0),
+            vec4(1.0, 1.0, 1.0, 1.0)
         )
     );
 
@@ -282,10 +225,13 @@ void init(void)
         vec3(.5,smv,-4.-smv),
         0.5,
         Material(
-           vec3(0.,.1,.1),
-           vec3(.3,.3,1),
-           vec3(.3,.3,1),
-           6.0
+            vec3(0.,.1,.1),
+            vec3(.3,.3,1),
+            vec3(.3,.3,1),
+            6.0,
+
+            vec4(1.0, 1.0, 1.0, 1.0),
+            vec4(1.0, 1.0, 1.0, 1.0)
         )
     );
 
@@ -296,7 +242,10 @@ void init(void)
             vec3(0.,.1,.1),
             vec3(1,.7,0.),
             vec3(1,.7,0.),
-            10.0
+            10.0,
+
+            vec4(1.0, 1.0, 1.0, 1.0),
+            vec4(1.0, 1.0, 1.0, 1.0)
         )
     );
 
@@ -307,17 +256,34 @@ void init(void)
 
    plane_count = 1;
    planes[0] = Plane(
-       vec3(0.0,-1.0, 0.0),
-       vec3(0.0, 1.0, 0.0),
-       Material(
-          vec3(0.,.1,.1),
-          vec3(0.,.1,.1),
-          vec3(0.,.1,.1),
-          1.0
+        vec3(0.0,-1.0, 0.0),
+        vec3(0.0, 1.0, 0.0),
+        Material(
+            vec3(0.,.1,.1),
+            vec3(0.,.1,.1),
+            vec3(0.,.1,.1),
+            1.0,
+
+            vec4(1.0, 1.0, 1.0, 1.0),
+            vec4(1.0, 1.0, 1.0, 1.0)
        )
    );
+
+   for (int i = 0; i < MAX_SPHERE_COUNT; i += 1) {
+        if (sphere_count == MAX_SPHERE_COUNT) { 
+            break;
+        }
+        spheres[i].mat.reflection.w = 1.0;
+   }
+    for (int i = 0; i < MAX_PLANE_COUNT; i += 1) {
+        if (sphere_count == MAX_PLANE_COUNT) { 
+            break;
+        }
+        planes[i].mat.reflection.w = 1.0;
+   }
 }
-#endif
+
+
 
 bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
 {    
@@ -329,8 +295,6 @@ bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
         vec3(conf.pos.xy, -conf.focal_len)
     );
 
-
-    
     Raytrace_Result rt_res[RT_TYPE_COUNT];
     Raytrace_Result rt_hit;
     
@@ -340,7 +304,7 @@ bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
     bool hit = false;
     float intensity = 1.0;
     for (int recursion_depth = 0; 
-        recursion_depth < RT_MAX_RECURSION_DEPTH; 
+        recursion_depth < RT_MAX_RECURSION_DEPTH + 1; 
         recursion_depth += 1) 
     {
         Ray_init(ray, origin, direction);
@@ -354,9 +318,10 @@ bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
             hit = true;
 
             if (rt_res[RT_TYPE_SPHERE].t < dist) {
-                dist         = rt_res[RT_TYPE_SPHERE].t;
                 result_idx   = RT_TYPE_SPHERE;
-                hit_material = spheres[rt_res[RT_TYPE_SPHERE].index].mat;
+                rt_hit       = rt_res[RT_TYPE_SPHERE];
+                dist         = rt_hit.t;
+                hit_material = rt_hit.mat;
             }
         }
 
@@ -364,17 +329,16 @@ bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
             hit = true;
 
             if (rt_res[RT_TYPE_PLANE].t < dist) {
-                dist         = rt_res[RT_TYPE_PLANE].t;
                 result_idx   = RT_TYPE_PLANE;
-                hit_material = planes[rt_res[RT_TYPE_PLANE].index].mat;
+                rt_hit       = rt_res[RT_TYPE_PLANE];
+                dist         = rt_hit.t;
+                hit_material = rt_hit.mat;
             }
         }
 
         if (!hit) {
             color += ambient.rgb * 0.25;
             break;
-        } else {
-            rt_hit = rt_res[result_idx];
         }
 
         eye_dir = -ray.W;
@@ -387,11 +351,14 @@ bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
             intensity
         );
 
-        intensity *= 0.8;
 
-
-        origin    = rt_hit.point + RT_EPSILON * ray.W;
-        direction = reflection(-ray.W, rt_hit.normal);
+        if (should_reflect(hit_material)) {
+            origin    = rt_hit.point + RT_EPSILON * ray.W;
+            direction = reflection(-ray.W, rt_hit.normal);
+            intensity *= 0.8;
+        } else {
+            break;
+        }
     }
 
     res.hit = hit;
@@ -415,7 +382,7 @@ bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
         }\
     } while (false)
 #else
-    #define raytrace_sphere(t, ray_, S) do { \
+    #define raytrace_sphere(t, t2, ray_, S) do { \
         vec3 origin = ray_.V - S.center; \
         float dir_dot_origin = dot(ray_.W, origin); \
         \
@@ -428,7 +395,15 @@ bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
         } else if (discrim >= RT_EPSILON) { \
             float sqroot = sqrt(discrim); \
             \
-            t = -dir_dot_origin + min(sqroot, -sqroot); \
+            float t1_ = -dir_dot_origin + sqroot; \
+            float t2_ = -dir_dot_origin - sqroot; \
+            if (t1_ < t2_) { \
+                t = t1_; \
+                t2 = t2_; \
+            } else { \
+                t = t2_; \
+                t2 = t1_; \
+            } \
         } \
     } while (false)
 #endif
@@ -436,31 +411,35 @@ bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
 
 bool raytrace_spheres(RT_SPHERE_PARAM_LIST) 
 {
-   float min_dist = RAYTRACE_OUTOFBOUNDS;
-   vec3  normal;
-   int   i_sphere = -1;
-   res.type = RT_TYPE_MISS;
+    float min_dist = RAYTRACE_OUTOFBOUNDS;
+    vec3  normal;
+    int   i_sphere = -1;
+    res.type = RT_TYPE_MISS;
+    vec3 center = vec3(0.0);
 
-
-   for (int i = 0; i < MAX_SPHERE_COUNT; i += 1) {
+    for (int i = 0; i < MAX_SPHERE_COUNT; i += 1) {
         if (i == sphere_count) {
             break;
         }
 
-        float t = RAYTRACE_OUTOFBOUNDS;
-        raytrace_sphere(t, ray, spheres[i]);
+        float t  = RAYTRACE_OUTOFBOUNDS;
+        float t2  = RAYTRACE_OUTOFBOUNDS;
+        raytrace_sphere(t, t2, ray, spheres[i]);
         if (t < min_dist && t >= 0.0) {
             min_dist = t;
             i_sphere = i;
             res.type = RT_TYPE_SPHERE;
             res.index  = i;
-            res.t = t;
+            res.mat = spheres[i].mat;
+            res.t  = t;
+            res.t2 = t2;
+            center = spheres[i].center;
         }
-   }
+    }
 
     if (res.type != RT_TYPE_MISS) {
         res.point  = (ray.V + (min_dist * ray.W));
-        res.normal = normalize(res.point - spheres[i_sphere].center);
+        res.normal = normalize(res.point - center);
         return true;
     }
     return false;
@@ -488,7 +467,8 @@ bool raytrace_spheres_shadow(RT_SPHERE_PARAM_LIST)
         }
 
         float t = -RAYTRACE_OUTOFBOUNDS;
-        raytrace_sphere(t, ray, spheres[i]);
+        float t2  = RAYTRACE_OUTOFBOUNDS;
+        raytrace_sphere(t, t2, ray, spheres[i]);
         if (t > 0.0) {
             return true;
         }
@@ -524,18 +504,18 @@ bool raytrace_planes(RT_PLANE_PARAM_LIST)
         float t = RAYTRACE_OUTOFBOUNDS;
         raytrace_plane(t, ray, planes[i]);
         if (t < min_dist && t >= 0.0) {
-            min_dist = t;
-            i_entity = i;
-            res.type = RT_TYPE_PLANE;
+            min_dist   = t;
+            i_entity   = i;
+            res.type   = RT_TYPE_PLANE;
             res.index  = i;
-            res.t = t;
+            res.t      = t;
+            res.mat    = planes[i].mat;
+            res.normal = planes[i].normal;
         }
    }
 
     if (res.type != RT_TYPE_MISS) {
         res.point  = (ray.V + (min_dist * ray.W));
-        res.normal = planes[i_entity].normal;
-
         return true;
     }
     return false;
@@ -551,7 +531,8 @@ bool raytrace_planes_shadow(RT_PLANE_PARAM_LIST)
         }
 
         float t = -RAYTRACE_OUTOFBOUNDS;
-        raytrace_sphere(t, ray, spheres[i]);
+        float t2  = RAYTRACE_OUTOFBOUNDS;
+        raytrace_sphere(t, t2, ray, spheres[i]);
         if (t > 0.0) {
             return true;
         }
@@ -582,10 +563,12 @@ vec3 calc_phong_lighting(Raytrace_Result res, Material mat, vec3 bg_color, vec3 
             break; 
         }
 
-        vec3 L = (d_light[i].dir);
+        vec3 L = -(d_light[i].dir);
 
         float dist = RAYTRACE_OUTOFBOUNDS;
+        
         Ray ray = Ray(res.point + (eye_dir * RT_EPSILON), L);
+        
         Raytrace_Result rt_res;
 
         // raytrace to spheres
@@ -596,14 +579,20 @@ vec3 calc_phong_lighting(Raytrace_Result res, Material mat, vec3 bg_color, vec3 
             vec3 R = reflection(L, N); // reflection vector about the normal
             
             // get the bisector between the normal and the light direction
-            vec3 bisector_N_L = (eye_dir + L) / length(eye_dir + L);
+            vec3 vec_sum = eye_dir + L;
+            vec3 bisector_N_L = vec_sum / length(vec_sum);
 
             float specular = pow(max(0.0, dot(bisector_N_L, R)), mat.spec_pow);
-            color += intensity * d_light[i].color * ((mat.diffuse * diffuse) + (mat.specular * specular));
+            
+            // Lrgb * ((D_rgb) + (S_rgb))
+            color += intensity * d_light[i].color * (
+                (mat.diffuse * diffuse) + (mat.specular * specular)
+            );
         }
     }
 
     return color;
-
 }
+
+
 
