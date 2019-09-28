@@ -29,8 +29,11 @@ vec2 rotate_2D_point_around(const vec2 pt, const vec2 origin, const float angle)
   ) + origin;
 }
 
-const float RAYTRACE_OUTOFBOUNDS = 1000.0;
+const float RAYTRACE_OUTOFBOUNDS   = 1000.0;
 const int   RT_MAX_RECURSION_DEPTH = 4;
+const int   RT_MAX_STEPS           = 4;
+const bool  enable_refraction      = true;
+const bool  enable_reflection      = true;
 
 // types
 
@@ -60,6 +63,8 @@ const float IDX_REFRACT_ICE          = 1.31;
 const float IDX_REFRACT_DIAMOND      = 2.417;
 const float IDX_REFRACT_SAPPHIRE     = 1.77;
 const float IDX_REFRACT_FUSED_QUARTZ = 1.46;
+
+
 
 struct Dir_Light {
     vec3 color;
@@ -201,10 +206,10 @@ void init(void)
 {
 
 // initialize world lights
-    d_light_count = 2;
+    d_light_count = 1;
     d_light[0] = Dir_Light(
         vec3(.5,.5,1.0),
-        normalize(-vec3(0.,sin01(-uTime),1.))
+        normalize(-vec3(sin01(-uTime),sin01(-uTime),1.))
     );
     d_light[1] = Dir_Light(
         vec3(.2,.1,.1),
@@ -303,7 +308,7 @@ void init(void)
                     dot(origin, origin) + \
                     (S.r * S.r); \
     \
-    if (discrim >= 0.0 && discrim < RT_EPSILON) { \
+    if (discrim == 0.0) { \
         t = -dir_dot_origin; \
     } else if (discrim >= RT_EPSILON) { \
         float sqroot = sqrt(discrim); \
@@ -535,58 +540,60 @@ struct Deferred_Ray_Info {
 
 void Deferred_Ray_Info_init(
     inout Deferred_Ray_Info info, 
-    int type, in Ray ray, Material mat, float intensity, int depth)
+    int type, in Ray ray, float intensity, int depth)
 {
     info.type      = type;
     info.depth     = depth;
     info.ray       = ray;
-    info.mat       = mat;
     info.intensity = intensity;
 }
 
-struct Ray_Stack {
-    int top_idx;
-    Deferred_Ray_Info dat[RT_MAX_RECURSION_DEPTH + 1];
+
+// Ray_Stack rays;
+
+// non-wrapping queue with bound on number of steps
+struct Rays {
+    int tail;
+    int head;
+    Deferred_Ray_Info dat[RT_MAX_RECURSION_DEPTH];
 };
-Ray_Stack Rays_make(void) {
-    Ray_Stack stack;
-    stack.top_idx = 0;
-    return stack;
-}
-void Rays_init(inout Ray_Stack st) 
+
+void Rays_init(inout Rays rays) 
 {
-    st.top_idx = 0;
+    rays.head = 0;
+    rays.tail = 0;
 }
-bool Rays_is_empty(inout Ray_Stack st) 
-{   
-    return (st.top_idx == 0);
-}
-void Rays_push(inout Ray_Stack st, int type, Ray ray, inout Material mat, float intensity, int depth) 
-{   
-    st.top_idx += 1;
-    for (int i = 0; i < RT_MAX_RECURSION_DEPTH + 1; i += 1) {
-        if (i == st.top_idx - 1) {
-            Deferred_Ray_Info_init(st.dat[i], type, ray, mat, intensity, depth);
-        }
-    }
+Rays Rays_make(void) {
+    Rays rays;
+    Rays_init(rays);
+    return rays;
 }
 
-Deferred_Ray_Info Rays_top(inout Ray_Stack st) 
-{
-    for (int i = 0; i < RT_MAX_RECURSION_DEPTH + 1; i += 1) {
-        if (i == st.top_idx - 1) {
-            return st.dat[i];
-        }
-    }
+#define Rays_is_empty(rays) (rays.head == rays.tail)
+
+#define Rays_count(st) rays.tail - rays.head
+
+void Rays_add(inout Rays rays, int type, Ray ray, float intensity, int depth) 
+{   
+    Deferred_Ray_Info_init(rays.dat[rays.tail], type, ray, intensity, depth);
+    rays.tail += 1;
 }
 
-#define Rays_pop(st) \
+void Rays_top(inout Rays rays, out Deferred_Ray_Info info) 
+{
+    info = rays.dat[rays.head];
+}
+
+#define Rays_remove(rays) \
 do \
 { \
-    st.top_idx = st.top_idx - 1; \
-} while(false) \
+    rays.head += 1; \
+} while(false)
 
-Ray_Stack ray_stack;
+#define Rays_exhausted(rays) \
+    (rays.tail == RT_MAX_RECURSION_DEPTH)
+
+Rays rays;
 
 bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
 {   
@@ -607,14 +614,14 @@ bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
     bool hit;
     float intensity = 1.0;
 
-    ray_stack = Rays_make();
+    rays = Rays_make();
 
 
     Deferred_Ray_Info ray_info;
 
     int depth = 0;
 
-    const int RT_MAX_STEPS = 4;
+    
     for (int step = 0; step < RT_MAX_STEPS; step += 1) {
         hit = false;
 
@@ -657,12 +664,12 @@ bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
 
         if (!hit) {
             color += ambient.rgb * 0.25;
-            if (Rays_is_empty(ray_stack)) {
+            if (Rays_is_empty(rays)) {
                 break;
             }
 
-            // ray_info  = Rays_top(ray_stack);
-            // Rays_pop(ray_stack);
+            // ray_info  = Rays_top(rays);
+            // Rays_remove(rays);
 
             // origin    = ray_info.ray.V;
             // direction = ray_info.ray.W;
@@ -679,103 +686,100 @@ bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
             intensity
         );
 
-        bool refraction_happened = false;
-        const bool enable_refraction = true;
-        if (enable_refraction && should_refract(hit_material)) {
-            vec3  P  = rt_hit.point;
-            vec3  N  = rt_hit.normal;
-            vec3  W  = ray.W;
-            float t  = dist;
-            float t2 = out_dist;
+        if (!Rays_exhausted(rays)) {
+            bool refraction_happened = false;
 
-            // compute the refracted ray
-            float refract_idx_before = 1.0;
-            float refract_idx_after  = refractive_index_of(hit_material);
+            if (enable_refraction && should_refract(hit_material)) {
+                vec3  P  = rt_hit.point;
+                vec3  N  = rt_hit.normal;
+                vec3  W  = ray.W;
+                float t  = dist;
+                float t2 = out_dist;
 
-            float index_of_refraction = refract_idx_after;
-            float index_of_refraction_inv = refract_idx_before / index_of_refraction;
+                // compute the refracted ray
+                float refract_idx_before = 1.0;
+                float refract_idx_after  = refractive_index_of(hit_material);
 
-            Ray ray_refract;
-            vec3 transmission_origin = vec3(0.0);
-            vec3 transmission_direction = vec3(0.0); 
-            {
-                // create the first bent ray
-                transmission_direction = refract_simple(W, N, index_of_refraction);
-                transmission_origin    = P - (RT_EPSILON * transmission_direction);
+                float index_of_refraction = refract_idx_after;
+                float index_of_refraction_inv = refract_idx_before / index_of_refraction;
 
-                Ray_init(ray_refract, transmission_origin, transmission_direction);
+                Ray ray_refract;
+                vec3 transmission_origin = vec3(0.0);
+                vec3 transmission_direction = vec3(0.0); 
+                {
+                    // create the first bent ray
+                    transmission_direction = refract_simple(W, N, index_of_refraction);
+                    transmission_origin    = P - (RT_EPSILON * transmission_direction);
 
-                switch (result_idx) {
-                case RT_TYPE_SPHERE: {
-                    refraction_happened = true;
+                    Ray_init(ray_refract, transmission_origin, transmission_direction);
 
-                    float t  = RAYTRACE_OUTOFBOUNDS;
-                    float t2 = RAYTRACE_OUTOFBOUNDS;
-                    raytrace_sphere(t, t2, ray_refract, spheres[which]);
+                    switch (result_idx) {
+                    case RT_TYPE_SPHERE: {
+                        refraction_happened = true;
 
-                    // create the second bent ray
-                    vec3 hit_point  = (ray_refract.V + (t2 * ray_refract.W));
-                    vec3 hit_normal = normalize(hit_point - spheres[which].center);
+                        float t  = RAYTRACE_OUTOFBOUNDS;
+                        float t2 = RAYTRACE_OUTOFBOUNDS;
+                        raytrace_sphere(t, t2, ray_refract, spheres[which]);
 
-                    transmission_direction = refract_simple(ray_refract.W, hit_normal, index_of_refraction_inv);
-                    transmission_origin    = hit_point + (RT_EPSILON * transmission_direction);
+                        // create the second bent ray
+                        vec3 hit_point  = (ray_refract.V + (t2 * ray_refract.W));
+                        vec3 hit_normal = normalize(hit_point - spheres[which].center);
 
-                    // defer to next depth level
-                    //origin    = transmission_origin;
-                    //direction = transmission_direction;
-                    Rays_push(ray_stack, 
-                        RAY_TYPE_REFRACT, 
-                        Ray_make(transmission_origin, transmission_direction), 
-                        hit_material, 
-                        1.0, 
-                        depth + 1
-                    );
+                        transmission_direction = refract_simple(ray_refract.W, hit_normal, index_of_refraction_inv);
+                        transmission_origin    = hit_point + (RT_EPSILON * transmission_direction);
 
-                    break;
-                }
-                case RT_TYPE_PLANE: {
-                    refraction_happened = false;
+                        // defer to next depth level
+                        //origin    = transmission_origin;
+                        //direction = transmission_direction;
 
-                    break;
-                }
+
+                        Rays_add(rays, 
+                            RAY_TYPE_REFRACT, 
+                            Ray_make(transmission_origin, transmission_direction),
+                            1.0, 
+                            depth + 1
+                        );
+
+                        break;
+                    }
+                    case RT_TYPE_PLANE: {
+                        refraction_happened = false;
+
+                        break;
+                    }
+                    }
                 }
             }
-
         }
 
-        // TEMP Control Flow, will revise
-        const bool enable_reflection = true;
-        vec3 reflect_origin;
-        vec3 reflect_direction;
-        bool reflected = false;
-        if (enable_reflection && should_reflect(hit_material)) {
-            reflected = true;
-            reflect_origin    = rt_hit.point + RT_EPSILON * ray.W;
-            reflect_direction = reflection(-ray.W, rt_hit.normal);
-            Rays_push(ray_stack, 
-                RAY_TYPE_REFLECT, 
-                Ray_make(reflect_origin, reflect_direction), 
-                hit_material, 
-                intensity * 0.8, 
-                depth + 1
-            );
+        if (!Rays_exhausted(rays)) {
+            vec3 reflect_origin;
+            vec3 reflect_direction;
+            bool reflected = false;
+            if (enable_reflection && should_reflect(hit_material)) {
+                reflected = true;
+                reflect_origin    = rt_hit.point + RT_EPSILON * ray.W;
+                reflect_direction = reflection(-ray.W, rt_hit.normal);
+                Rays_add(rays, 
+                    RAY_TYPE_REFLECT, 
+                    Ray_make(reflect_origin, reflect_direction), 
+                    intensity * 0.8, 
+                    depth + 1
+                );
+            }
         }
 
-        if (Rays_is_empty(ray_stack)) {
+        if (Rays_is_empty(rays)) {
             break;
         }
-        do {
-            ray_info  = Rays_top(ray_stack);
-            Rays_pop(ray_stack);
 
-            origin    = ray_info.ray.V;
-            direction = ray_info.ray.W;
-            intensity = ray_info.intensity;
-            depth     = ray_info.depth;
-        } while ((depth > RT_MAX_RECURSION_DEPTH + 1) && !Rays_is_empty(ray_stack));
-        if (depth > RT_MAX_RECURSION_DEPTH) {
-            break;
-        }
+        Rays_top(rays, ray_info);
+        Rays_remove(rays);
+
+        origin    = ray_info.ray.V;
+        direction = ray_info.ray.W;
+        intensity = ray_info.intensity;
+        depth     = ray_info.depth;
     }
 
     res.hit = hit;
