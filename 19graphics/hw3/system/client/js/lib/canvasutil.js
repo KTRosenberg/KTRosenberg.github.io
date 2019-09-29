@@ -2,7 +2,7 @@
 
 const CanvasUtil = (function() {
 
-	let _onResizeEventHandler;
+	let _onResizeEventHandler = () => {};
 	
 	function resizeToDisplaySize(canvas, scale = 1) {
 	  const realToCSSPixels = window.devicePixelRatio;
