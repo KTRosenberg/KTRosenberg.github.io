@@ -13,7 +13,7 @@ const MREditor = (function() {
 
     let globalErrorMsgNode;
     let globalErrorMsgNodeText;
-    let globalErrorMsgState = {vertex : "", fragment : ""};
+    let globalErrorMsgState = {vertex : "", fragment : "", link : ""};
 
 	class Editor {
 		constructor() {
@@ -1124,6 +1124,7 @@ const MREditor = (function() {
         propErrorState.set("main", false);
 
         const logError = function(args) {
+
             const errorMessageNodes = record.errorMessageNodes;
             let hasError = false;
             for (let prop in args) {
@@ -1149,6 +1150,9 @@ const MREditor = (function() {
                     }
                 }
             }
+            if (args.link != '') {
+                hasError = true;
+            }
             if (hasError) {
                 hOuter.classList = propHiddenState.get("main") ? 
                                     "shader_section_error_inactive" :
@@ -1158,6 +1162,9 @@ const MREditor = (function() {
                 let errMsg = '';
                 for (let msgProp in globalErrorMsgState) {
                     errMsg += globalErrorMsgState[msgProp];
+                }
+                if (args.link) {
+                    errMsg += args.link;
                 }
                 globalErrorMsgNodeText.nodeValue = errMsg;
             } else {

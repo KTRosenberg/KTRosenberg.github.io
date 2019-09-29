@@ -184,6 +184,9 @@ out Raytrace_Result res
 in Ray ray, \
 out Raytrace_Result res
 
+#define RT_SHADOW_PARAM_LIST \
+in Ray ray, \
+out Raytrace_Result res
 
 bool raytrace_spheres(RT_SPHERE_PARAM_LIST);
 bool raytrace_planes(RT_PLANE_PARAM_LIST);
@@ -423,7 +426,11 @@ const int RT_HS_CASE_INSIDE_CONTAINED = 4;
 do { \
     vec4 V_hg = vec4(ray_.V, 1.0); \
     float P_dot_V = dot(hs, V_hg); \
-    t = (-P_dot_V) / dot(hs, vec4(ray_.W, 0.0)); \
+    float den = dot(hs, vec4(ray_.W, 0.0)); \
+    if (den == 0.0) { \
+        den = RT_EPSILON; \
+    } \
+    t = (-P_dot_V) / den; \
     /* ray origin outside */ \
     if (P_dot_V > 0.0) { \
         /* missed */ \
@@ -569,50 +576,6 @@ bool raytrace_polyhedra(RT_POLYHEDRON_PARAM_LIST)
     return false;
 }
 
-bool raytrace_spheres_shadow(RT_POLYHEDRON_PARAM_LIST)
-{
-    for (int i = 0; i < MAX_SPHERE_COUNT; i += 1) {
-        if (i == sphere_count) {
-            break;
-        }
-
-        float t = -RAYTRACE_OUTOFBOUNDS;
-        float t2  = RAYTRACE_OUTOFBOUNDS;
-        raytrace_sphere(t, t2, ray, spheres[i]);
-        if (t > 0.0) {
-            return true;
-        }
-    }
-    for (int i = 0; i < MAX_PLANE_COUNT; i += 1) {
-        if (i == plane_count) {
-            break;
-        }
-
-        float t = -RAYTRACE_OUTOFBOUNDS;
-        raytrace_plane(t, ray, planes[i]);
-        if (t > 0.0) {
-            return true;
-        }
-    }
-    for (int i = 0; i < MAX_POLYHEDRON_COUNT; i += 1) {
-        if (i == polyhedron_count) {
-            break;
-        }
-
-        float t = RAYTRACE_OUTOFBOUNDS;
-        Raytrace_Polyhedron_Result res_poly;
-        if (!raytrace_polyhedron(t, ray, polyhedra[i], res_poly)) {
-            continue;
-        }
-
-        if (t > 0.0) {
-            return true;
-        }
-    }
-    return false;
-}
-
-
 bool raytrace_planes(RT_PLANE_PARAM_LIST) 
 {
    float min_dist = RAYTRACE_OUTOFBOUNDS;
@@ -648,52 +611,7 @@ bool raytrace_planes(RT_PLANE_PARAM_LIST)
 }
 
 
-
-bool raytrace_planes_shadow(RT_PLANE_PARAM_LIST)
-{
-    for (int i = 0; i < MAX_SPHERE_COUNT; i += 1) {
-        if (i == sphere_count) {
-            break;
-        }
-
-        float t = -RAYTRACE_OUTOFBOUNDS;
-        float t2  = RAYTRACE_OUTOFBOUNDS;
-        raytrace_sphere(t, t2, ray, spheres[i]);
-        if (t > 0.0) {
-            return true;
-        }
-    }
-    for (int i = 0; i < MAX_PLANE_COUNT; i += 1) {
-        if (i == plane_count) {
-            break;
-        }
-
-        float t = -RAYTRACE_OUTOFBOUNDS;
-        raytrace_plane(t, ray, planes[i]);
-        if (t > 0.0) {
-            return true;
-        }
-    }
-
-
-    for (int i = 0; i < MAX_POLYHEDRON_COUNT; i += 1) {
-        if (i == polyhedron_count) {
-            break;
-        }
-
-        float t = RAYTRACE_OUTOFBOUNDS;
-        Raytrace_Polyhedron_Result res_poly;
-        if (!raytrace_polyhedron(t, ray, polyhedra[i], res_poly)) {
-            continue;
-        }
-        if (t > 0.0) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool raytrace_polyhedra_shadow(RT_PLANE_PARAM_LIST)
+bool raytrace_shadow(RT_SHADOW_PARAM_LIST)
 {
     for (int i = 0; i < MAX_SPHERE_COUNT; i += 1) {
         if (i == sphere_count) {
@@ -756,9 +674,7 @@ vec3 calc_phong_lighting(Raytrace_Result res, inout Material mat, vec3 bg_color,
         Raytrace_Result rt_res;
 
         // raytrace to spheres
-        if (!raytrace_spheres_shadow(ray, rt_res) && 
-            !raytrace_planes_shadow(ray, rt_res) &&
-            !raytrace_polyhedra_shadow(ray, rt_res))
+        if (!raytrace_shadow(ray, rt_res))
         {
             float diffuse = max(0.0, dot(N, L));
             vec3 R = reflection(L, N); // reflection vector about the normal
@@ -804,15 +720,13 @@ struct Deferred_Ray_Info {
     float    intensity;
 };
 
-void Deferred_Ray_Info_init(
-    inout Deferred_Ray_Info info, 
-    int type, in Ray ray, float intensity, int depth)
-{
-    info.type      = type;
-    info.depth     = depth;
-    info.ray       = ray;
-    info.intensity = intensity;
-}
+#define Deferred_Ray_Info_init(info_, type_, ray_, intensity_, depth_) \
+do { \
+    info_.type      = type_; \
+    info_.depth     = depth_; \
+    info_.ray       = ray_; \
+    info_.intensity = intensity_; \
+} while (false)
 
 
 // Ray_Stack rays;
@@ -839,10 +753,17 @@ Rays Rays_make(void) {
 
 #define Rays_count(st) rays.tail - rays.head
 
-void Rays_add(inout Rays rays, int type, Ray ray, float intensity, int depth) 
+void Rays_add(out Rays rays, int type, Ray ray, float intensity, int depth) 
 {   
-    Deferred_Ray_Info_init(rays.dat[rays.tail], type, ray, intensity, depth);
-    rays.tail += 1;
+    Deferred_Ray_Info ray_info;
+    for (int i = 0; i < RT_MAX_RECURSION_DEPTH; i += 1) {
+        if (i == rays.tail) {
+            Deferred_Ray_Info_init(ray_info, type, ray, intensity, depth);
+            rays.dat[i] = ray_info;
+            rays.tail += 1;
+            break;
+        }
+    }
 }
 
 void Rays_top(inout Rays rays, out Deferred_Ray_Info info) 
