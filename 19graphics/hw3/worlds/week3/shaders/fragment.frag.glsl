@@ -1,6 +1,11 @@
 #version 300 es
 precision highp float;
 
+// NOTE: Not mean for real-time on lower-end hardware,
+// does multiple iterations of reflection and refraction with several objects,
+// if slow, try hitting "Alt" to reduce the resolution
+// Also, starts-up slowly on Windows due to translation to HLSL / DirectX
+
 uniform float uTime;
 in vec3 vPos;
 out vec4 fragColor;

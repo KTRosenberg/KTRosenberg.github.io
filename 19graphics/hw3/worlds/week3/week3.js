@@ -58,6 +58,14 @@ async function setup(state) {
                 state.uViewLoc         = gl.getUniformLocation(program, 'uView');
                 state.uProjLoc         = gl.getUniformLocation(program, 'uProj');
                 state.uTimeLoc         = gl.getUniformLocation(program, 'uTime');
+                state.uResolutionLoc   = gl.getUniformLocation(program, 'uResolution');
+                const cvs = MR.getCanvas();
+
+                if (state.uResolutionLoc) {
+                    gl.uniform2fv(state.uResolutionLoc, new Float32Array([
+                        cvs.clientWidth, cvs.clientHeight
+                    ]));
+                }
             } 
         },
         {
