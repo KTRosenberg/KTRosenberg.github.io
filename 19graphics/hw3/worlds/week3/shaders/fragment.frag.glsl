@@ -30,7 +30,7 @@ vec2 rotate_2D_point_around(const vec2 pt, const vec2 origin, const float angle)
 }
 
 const float RAYTRACE_OUTOFBOUNDS   = 1000.0;
-const int   RT_MAX_RECURSION_DEPTH = 4;
+const int   RT_MAX_RECURSION_DEPTH = 2;
 const int   RT_MAX_STEPS           = 4;
 const bool  enable_refraction      = true;
 const bool  enable_reflection      = true;
@@ -88,33 +88,49 @@ struct Plane {
     Material mat;
 };
 
+#define MAX_POLY_PLANES (10)
+struct Polyhedron {
+    vec3  center;
+    float r;
+    int   plane_count;
+    Material mat;
+    vec4  planes[MAX_POLY_PLANES];
+};
+void Polyhedron_init(inout Polyhedron poly, vec3 center, float r, int plane_count, in Material mat)
+{
+    poly.center      = center;
+    poly.r           = r;
+    poly.plane_count = plane_count;
+    poly.mat         = mat;
+}
+
 #define MAX_SPHERE_COUNT  (3)
 #define MAX_PLANE_COUNT  (1)
+#define MAX_POLYHEDRON_COUNT (2)
 #define MAX_D_LIGHT_COUNT (2)
 #define MAX_P_LIGHT_COUNT (1)
 
 #define RT_EPSILON (0.001)
 
+vec4 ambient;
 
-    int d_light_count;
-    Dir_Light d_light[MAX_D_LIGHT_COUNT];
+const int d_light_count = 2;
+Dir_Light d_light[MAX_D_LIGHT_COUNT];
 
-//  int p_l_count;
-//  Point_Light p_light[MAX_P_LIGHT_COUNT];
+const int sphere_count = 3;
+Sphere spheres[MAX_SPHERE_COUNT];
 
-    vec4 ambient;
+const int polyhedron_count = 2;
+Polyhedron polyhedra[MAX_POLYHEDRON_COUNT];
 
-    int sphere_count;
-    Sphere spheres[MAX_SPHERE_COUNT];
+const int plane_count = 1;
+Plane planes[MAX_PLANE_COUNT];
 
-    int plane_count;
-    Plane planes[MAX_PLANE_COUNT];
-
-
-const int RT_TYPE_SPHERE =  0;
-const int RT_TYPE_PLANE  =  1;
-const int RT_TYPE_MISS   = -1;
-const int RT_TYPE_COUNT  =  2;
+const int RT_TYPE_SPHERE     =  0;
+const int RT_TYPE_PLANE      =  1;
+const int RT_TYPE_POLYHEDRON =  2;
+const int RT_TYPE_MISS       = -1;
+const int RT_TYPE_COUNT      =  3;
 
 struct Raytrace_Result {
     float    t;
@@ -157,40 +173,27 @@ void init(void);
 bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output pass);
 
 #define RT_SPHERE_PARAM_LIST \
-Ray ray, \
+in Ray ray, \
 out Raytrace_Result res
 
 #define RT_PLANE_PARAM_LIST \
 in Ray ray, \
 out Raytrace_Result res
 
+#define RT_POLYHEDRON_PARAM_LIST \
+in Ray ray, \
+out Raytrace_Result res
+
 
 bool raytrace_spheres(RT_SPHERE_PARAM_LIST);
 bool raytrace_planes(RT_PLANE_PARAM_LIST);
+bool raytrace_polyhedra(RT_POLYHEDRON_PARAM_LIST);
 
-vec3 calc_phong_lighting(Raytrace_Result res, Material mat, vec3 bg_color, vec3 eye_dir, float intensity);
+vec3 calc_phong_lighting(Raytrace_Result res, inout Material mat, vec3 bg_color, vec3 eye_dir, float intensity);
 
 
 const float focal_length = 3.0; // distance to image plane
 
-void main(void)
-{
-    init();
-
-    vec4 color = vec4(vec3(0.0), 0.5);
-    
-    rt_conf = Raytrace_Config(
-        vPos, 
-        focal_length
-    );
-    Raytrace_Pass_Output res;
-    if (raytrace(rt_conf, res)) {
-    }
-    color = vec4(res.color, 1.0);
-
-
-    fragColor = color;
-}
 
 vec3 reflection(vec3 I, vec3 N) 
 {
@@ -206,14 +209,13 @@ void init(void)
 {
 
 // initialize world lights
-    d_light_count = 1;
     d_light[0] = Dir_Light(
         vec3(.5,.5,1.0),
         normalize(-vec3(sin01(-uTime),sin01(-uTime),1.))
     );
     d_light[1] = Dir_Light(
-        vec3(.2,.1,.1),
-        normalize(vec3(-1.,-1.,-1.))
+        vec3(1.0,.1,.1),
+        normalize(vec3(0.0,-1.,0.0))
     );
 
     ambient = vec4(0.045, 0.02, 0.01, 1.0);
@@ -223,7 +225,6 @@ void init(void)
 
     float smv = 0.5 * sin(2.0 * uTime);
 
-    sphere_count = 3;
     spheres[0] = Sphere(
         vec3(0.0 - sin(uTime), 1.5, 5.0 * sin(uTime)),
         0.5 ,//+ abs(noise(vec3(vPos.xy * sin(uTime), 0.0))), // NOTE: this doesn't affect the reflections -- would need to do transformation based on raytraced point
@@ -270,34 +271,68 @@ void init(void)
    // make the plane react to the position
    // of the yellow sphere
    
-
-   plane_count = 1;
    planes[0] = Plane(
-        vec3(0.0,-1.0, 0.0),
-        vec3(0.0, 1.0, 0.0),
+        vec3(0.0,-1.0 - sin(0.2 * uTime + noise(vPos)), 0.0),
+        vec3(0.0, 1.0, sin01(uTime / -2.0) * .25),
         Material(
-            vec3(0.,.1,.1),
-            vec3(0.,.1,.1),
+            vec3(0.,.1,0.76),
+            vec3(0.,.1,0.97),
             vec3(0.,.1,.1),
             1.0,
 
             vec4(1.0, 1.0, 1.0, 1.0),
-            vec4(1.0, 1.0, 1.0, 1.0)
+            vec4(vec3(0.5), IDX_REFRACT_WATER)
        )
-   );
+    );
 
-   for (int i = 0; i < MAX_SPHERE_COUNT; i += 1) {
-        if (sphere_count == MAX_SPHERE_COUNT) { 
-            break;
-        }
-        spheres[i].mat.reflection.w = 1.0;
-   }
-    for (int i = 0; i < MAX_PLANE_COUNT; i += 1) {
-        if (sphere_count == MAX_PLANE_COUNT) { 
-            break;
-        }
-        planes[i].mat.reflection.w = 1.0;
-   }
+    Polyhedron_init(polyhedra[0],
+        vec3(0.0, sin01(uTime), -10),
+        0.5,
+        6,
+        Material(
+            vec3(1.0),
+            vec3(1.0),
+            vec3(0.02, 0.0124, 06234),
+            6.0,
+            vec4(1.0, 1.0, 1.0, 1.0),
+            vec4(vec3(0.5), IDX_REFRACT_FUSED_QUARTZ)
+        )
+    );
+
+    polyhedra[0].planes[0] = vec4(-1.0,  0.0,  0.0, -polyhedra[0].r);
+    polyhedra[0].planes[1] = vec4( 1.0,  0.0,  0.0, -polyhedra[0].r);
+    polyhedra[0].planes[2] = vec4( 0.0, -1.0,  0.0, -polyhedra[0].r);
+    polyhedra[0].planes[3] = vec4( 0.0,  1.0,  0.0, -polyhedra[0].r);
+    polyhedra[0].planes[4] = vec4( 0.0,  0.0, -1.0, -polyhedra[0].r);
+    polyhedra[0].planes[5] = vec4( 0.0,  0.0,  1.0, -polyhedra[0].r - (10.0 * sin01(uTime)));
+
+    Polyhedron_init(polyhedra[1],
+        vec3(cos(uTime), sin01(uTime), 0.0),
+        sin01(-uTime),
+        8,
+        Material(
+            vec3(0.01, 0.2, 0.01),
+            vec3(0.67, 0.0, 0.02),
+            vec3(0.01, 0.2, 0.6),
+            10.0,
+            vec4(1.0, 1.0, 1.0, 1.0),
+            vec4(vec3(0.5), IDX_REFRACT_DIAMOND)
+        )
+    );
+
+    {
+        float r = polyhedra[1].r;
+        float r3 = 1.0 / sqrt(r);
+        polyhedra[1].planes[0] = vec4(-r3, -r3, -r3, -r);
+        polyhedra[1].planes[1] = vec4( r3, -r3, -r3, -r);
+        polyhedra[1].planes[2] = vec4(-r3,  r3, -r3, -r);
+        polyhedra[1].planes[3] = vec4( r3,  r3, -r3, -r);
+        polyhedra[1].planes[4] = vec4(-r3, -r3,  r3, -r);
+        polyhedra[1].planes[5] = vec4( r3, -r3,  r3, -r);
+        polyhedra[1].planes[6] = vec4(-r3,  r3,  r3, -r);
+        polyhedra[1].planes[7] = vec4( r3,  r3,  r3, -r);
+    }
+
 }
 
 #define raytrace_sphere(t, t2, ray_, S) do { \
@@ -316,10 +351,10 @@ void init(void)
         float t1_ = -dir_dot_origin + sqroot; \
         float t2_ = -dir_dot_origin - sqroot; \
         if (t1_ < t2_) { \
-            t = t1_; \
+            t  = t1_; \
             t2 = t2_; \
         } else { \
-            t = t2_; \
+            t  = t2_; \
             t2 = t1_; \
         } \
     } \
@@ -377,7 +412,164 @@ bool raytrace_spheres(RT_SPHERE_PARAM_LIST)
     } \
 } while (false)
 
-bool raytrace_spheres_shadow(RT_SPHERE_PARAM_LIST)
+// TODO
+
+const int RT_HS_CASE_OUTSIDE_MISSED   = 1;
+const int RT_HS_CASE_OUTSIDE_ENTERING = 2;
+const int RT_HS_CASE_INSIDE_EXITING   = 3;
+const int RT_HS_CASE_INSIDE_CONTAINED = 4;
+
+#define raytrace_halfspace(t, case_, ray_, hs) \
+do { \
+    vec4 V_hg = vec4(ray_.V, 1.0); \
+    float P_dot_V = dot(hs, V_hg); \
+    t = (-P_dot_V) / dot(hs, vec4(ray_.W, 0.0)); \
+    /* ray origin outside */ \
+    if (P_dot_V > 0.0) { \
+        /* missed */ \
+        if (t < 0.0) { \
+            case_ = RT_HS_CASE_OUTSIDE_MISSED; \
+        } else { /* entering */ \
+            case_ = RT_HS_CASE_OUTSIDE_ENTERING; \
+        } \
+    /* ray origin inside */ \
+    } else if (P_dot_V < 0.0) { \
+        /* ray is exiting */ \
+        if (t > 0.0) { \
+          case_ = RT_HS_CASE_INSIDE_EXITING; \
+        } else { /* entire ray contained within */ \
+          case_ = RT_HS_CASE_INSIDE_CONTAINED;  \
+        } \
+    } \
+} while (false)
+
+
+struct Raytrace_Polyhedron_Result {
+    vec2 bounds;
+    vec3 N_front;
+    int  N_front_idx;
+    vec3 N_back;
+    int  N_back_idx;
+};
+
+const bool use_debug = false;
+bool debug_success   = false;
+
+bool raytrace_polyhedron(out float t, in Ray ray, in Polyhedron P, out Raytrace_Polyhedron_Result res)
+{
+    vec2 bounds = vec2(
+        -RAYTRACE_OUTOFBOUNDS * 10.0, 
+        RAYTRACE_OUTOFBOUNDS * 10.0
+    );
+    const int min_idx = 0;
+    const int max_idx = 1;
+
+    vec3 N_front_surface;
+    int  N_front_surface_idx;
+    vec3 N_back_surface;
+    int  N_back_surface_idx;
+
+    bool a_halfspace_was_missed = false;
+
+    Ray_init(ray, ray.V - P.center, ray.W);
+
+    for (int i = 0; i < MAX_POLY_PLANES; i += 1) {
+        if (i == P.plane_count) {
+            break;
+        }
+
+        float t = RAYTRACE_OUTOFBOUNDS;
+        int hs_case = -1;
+
+        raytrace_halfspace(t, hs_case, ray, P.planes[i]);
+
+        switch (hs_case) {
+        case RT_HS_CASE_OUTSIDE_MISSED: {
+            a_halfspace_was_missed = true;
+            break;
+        }
+        case RT_HS_CASE_OUTSIDE_ENTERING: {
+            if (t > bounds[min_idx]) {
+                N_front_surface = P.planes[i].xyz;
+                N_front_surface_idx = i;
+                
+                bounds[min_idx] = t;
+            }
+            break;
+        }
+        case RT_HS_CASE_INSIDE_EXITING: {
+            if (t < bounds[max_idx]) {
+                N_back_surface = P.planes[i].xyz;
+                N_back_surface_idx = i;
+
+                bounds[max_idx] = t;
+            }
+
+            break;
+        }
+        case RT_HS_CASE_INSIDE_CONTAINED: {
+            break;
+        }
+        default: {
+
+            break;
+        }
+        }
+    }
+
+    if (!a_halfspace_was_missed && (bounds[0] <= bounds[1])) {
+        res.bounds = bounds;
+        res.N_front = N_front_surface;
+        res.N_front_idx = N_front_surface_idx;
+        res.N_back = N_back_surface;
+        res.N_back_idx = N_back_surface_idx;
+
+        t = bounds[0];
+
+        return true;
+    }
+    return false;
+}
+
+bool raytrace_polyhedra(RT_POLYHEDRON_PARAM_LIST)
+{
+   float min_dist = RAYTRACE_OUTOFBOUNDS;
+   vec3  normal;
+   int   i_entity = -1;
+   res.type = RT_TYPE_MISS;
+
+
+   for (int i = 0; i < MAX_POLYHEDRON_COUNT; i += 1) {
+        if (i == polyhedron_count) {
+            break;
+        }
+
+        float t = RAYTRACE_OUTOFBOUNDS;
+        Raytrace_Polyhedron_Result res_poly;
+        if (!raytrace_polyhedron(t, ray, polyhedra[i], res_poly)) {
+            continue;
+        }
+
+        if (t < min_dist && t >= 0.0) {
+            min_dist   = t;
+            i_entity   = i;
+            res.type   = RT_TYPE_POLYHEDRON;
+            res.index  = i;
+            res.t      = t;
+            res.t2     = res_poly.bounds.y;
+            res.mat    = polyhedra[i].mat;
+            res.normal = res_poly.N_front;
+        }
+   }
+
+    if (res.type != RT_TYPE_MISS) {
+        res.point  = (ray.V + (min_dist * ray.W));
+        return true;
+    }
+    return false;
+}
+
+bool raytrace_spheres_shadow(RT_POLYHEDRON_PARAM_LIST)
 {
     for (int i = 0; i < MAX_SPHERE_COUNT; i += 1) {
         if (i == sphere_count) {
@@ -398,6 +590,21 @@ bool raytrace_spheres_shadow(RT_SPHERE_PARAM_LIST)
 
         float t = -RAYTRACE_OUTOFBOUNDS;
         raytrace_plane(t, ray, planes[i]);
+        if (t > 0.0) {
+            return true;
+        }
+    }
+    for (int i = 0; i < MAX_POLYHEDRON_COUNT; i += 1) {
+        if (i == polyhedron_count) {
+            break;
+        }
+
+        float t = RAYTRACE_OUTOFBOUNDS;
+        Raytrace_Polyhedron_Result res_poly;
+        if (!raytrace_polyhedron(t, ray, polyhedra[i], res_poly)) {
+            continue;
+        }
+
         if (t > 0.0) {
             return true;
         }
@@ -467,11 +674,69 @@ bool raytrace_planes_shadow(RT_PLANE_PARAM_LIST)
             return true;
         }
     }
+
+
+    for (int i = 0; i < MAX_POLYHEDRON_COUNT; i += 1) {
+        if (i == polyhedron_count) {
+            break;
+        }
+
+        float t = RAYTRACE_OUTOFBOUNDS;
+        Raytrace_Polyhedron_Result res_poly;
+        if (!raytrace_polyhedron(t, ray, polyhedra[i], res_poly)) {
+            continue;
+        }
+        if (t > 0.0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool raytrace_polyhedra_shadow(RT_PLANE_PARAM_LIST)
+{
+    for (int i = 0; i < MAX_SPHERE_COUNT; i += 1) {
+        if (i == sphere_count) {
+            break;
+        }
+
+        float t = -RAYTRACE_OUTOFBOUNDS;
+        float t2  = RAYTRACE_OUTOFBOUNDS;
+        raytrace_sphere(t, t2, ray, spheres[i]);
+        if (t > 0.0) {
+            return true;
+        }
+    }
+    for (int i = 0; i < MAX_PLANE_COUNT; i += 1) {
+        if (i == plane_count) {
+            break;
+        }
+
+        float t = -RAYTRACE_OUTOFBOUNDS;
+        raytrace_plane(t, ray, planes[i]);
+        if (t > 0.0) {
+            return true;
+        }
+    }
+    for (int i = 0; i < MAX_POLYHEDRON_COUNT; i += 1) {
+        if (i == polyhedron_count) {
+            break;
+        }
+
+        float t = RAYTRACE_OUTOFBOUNDS;
+        Raytrace_Polyhedron_Result res_poly;
+        if (!raytrace_polyhedron(t, ray, polyhedra[i], res_poly)) {
+            continue;
+        }
+        if (t > 0.0) {
+            return true;
+        }
+    }
     return false;
 }
 
 //vec3 refract(vec3 I, vec3 N, float indexof
-vec3 calc_phong_lighting(Raytrace_Result res, Material mat, vec3 bg_color, vec3 eye_dir, float intensity)
+vec3 calc_phong_lighting(Raytrace_Result res, inout Material mat, vec3 bg_color, vec3 eye_dir, float intensity)
 {
     vec3 N = res.normal;
 
@@ -492,7 +757,8 @@ vec3 calc_phong_lighting(Raytrace_Result res, Material mat, vec3 bg_color, vec3 
 
         // raytrace to spheres
         if (!raytrace_spheres_shadow(ray, rt_res) && 
-            !raytrace_planes_shadow(ray, rt_res)) 
+            !raytrace_planes_shadow(ray, rt_res) &&
+            !raytrace_polyhedra_shadow(ray, rt_res))
         {
             float diffuse = max(0.0, dot(N, L));
             vec3 R = reflection(L, N); // reflection vector about the normal
@@ -662,18 +928,38 @@ bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
             }
         }
 
+        if (raytrace_polyhedra(ray, rt_res[RT_TYPE_POLYHEDRON])) {
+            hit = true;
+
+
+            if (rt_res[RT_TYPE_PLANE].t < dist) {
+                result_idx   = RT_TYPE_POLYHEDRON;
+                rt_hit       = rt_res[RT_TYPE_POLYHEDRON];
+
+                dist         = rt_hit.t;
+                out_dist     = rt_hit.t2;
+                hit_material = rt_hit.mat;
+                which        = rt_hit.index;
+            } 
+        } else {
+            //discard;
+        }
+
         if (!hit) {
             color += ambient.rgb * 0.25;
             if (Rays_is_empty(rays)) {
                 break;
             }
 
-            // ray_info  = Rays_top(rays);
-            // Rays_remove(rays);
+            Rays_top(rays, ray_info);
+            Rays_remove(rays);
 
-            // origin    = ray_info.ray.V;
-            // direction = ray_info.ray.W;
-            // intensity = ray_info.intensity;
+            origin    = ray_info.ray.V;
+            direction = ray_info.ray.W;
+            intensity = ray_info.intensity;
+            depth     = ray_info.depth;
+
+            continue;
         }
 
         eye_dir = -ray.W;
@@ -728,15 +1014,11 @@ bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
                         transmission_direction = refract_simple(ray_refract.W, hit_normal, index_of_refraction_inv);
                         transmission_origin    = hit_point + (RT_EPSILON * transmission_direction);
 
-                        // defer to next depth level
-                        //origin    = transmission_origin;
-                        //direction = transmission_direction;
-
 
                         Rays_add(rays, 
                             RAY_TYPE_REFRACT, 
                             Ray_make(transmission_origin, transmission_direction),
-                            1.0, 
+                            intensity * 0.8, 
                             depth + 1
                         );
 
@@ -744,6 +1026,32 @@ bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
                     }
                     case RT_TYPE_PLANE: {
                         refraction_happened = false;
+
+                        break;
+                    }
+                    case RT_TYPE_POLYHEDRON: {
+                        refraction_happened = true;
+
+                        float t  = RAYTRACE_OUTOFBOUNDS;
+                        float t2 = RAYTRACE_OUTOFBOUNDS;
+
+                        Raytrace_Polyhedron_Result poly_res;
+                        raytrace_polyhedron(t, ray_refract, polyhedra[which], poly_res);
+
+                        // create the second bent ray
+                        vec3 hit_point  = (ray_refract.V + (t2 * ray_refract.W));
+                        vec3 hit_normal = normalize(hit_point - spheres[which].center);
+
+                        transmission_direction = refract_simple(ray_refract.W, hit_normal, index_of_refraction_inv);
+                        transmission_origin    = (-vec3(noise(rt_hit.point - uTime)) * ((result_idx == RT_TYPE_PLANE) ? 1.0 : 0.0)) + hit_point + (RT_EPSILON * transmission_direction);
+
+
+                        Rays_add(rays, 
+                            RAY_TYPE_REFRACT, 
+                            Ray_make(transmission_origin, transmission_direction),
+                            intensity * 0.8, 
+                            depth + 1
+                        );
 
                         break;
                     }
@@ -758,7 +1066,7 @@ bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
             bool reflected = false;
             if (enable_reflection && should_reflect(hit_material)) {
                 reflected = true;
-                reflect_origin    = rt_hit.point + RT_EPSILON * ray.W;
+                reflect_origin    = (-vec3(noise(rt_hit.point - uTime)) * ((result_idx == RT_TYPE_PLANE) ? 1.0 : 0.0)) + rt_hit.point + RT_EPSILON * ray.W;
                 reflect_direction = reflection(-ray.W, rt_hit.normal);
                 Rays_add(rays, 
                     RAY_TYPE_REFLECT, 
@@ -786,4 +1094,28 @@ bool raytrace(in Raytrace_Config conf, out Raytrace_Pass_Output res)
     res.color = color;
     return res.hit;
 }
+
+void main(void)
+{
+    init();
+
+    vec4 color = vec4(vec3(0.0), 0.5);
+    
+    rt_conf = Raytrace_Config(
+        vPos, 
+        focal_length
+    );
+    Raytrace_Pass_Output res;
+    if (raytrace(rt_conf, res)) {
+    }
+    color = vec4(res.color, 1.0);
+
+    if (use_debug) {
+        color = vec4((debug_success) ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0), 1.0);
+    }
+
+
+    fragColor = color;
+}
+
 
