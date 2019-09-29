@@ -758,17 +758,16 @@ Rays Rays_make(void) {
 
 #define Rays_count(st) rays.tail - rays.head
 
-void Rays_add(out Rays rays, int type, Ray ray, float intensity, int depth) 
+void Rays_add(inout Rays rays, int type, Ray ray, float intensity, int depth) 
 {   
-    Deferred_Ray_Info ray_info;
+    int tail = rays.tail;
     for (int i = 0; i < RT_MAX_RECURSION_DEPTH; i += 1) {
-        if (i == rays.tail) {
-            Deferred_Ray_Info_init(ray_info, type, ray, intensity, depth);
-            rays.dat[i] = ray_info;
-            rays.tail += 1;
+        if (i == tail) {
+            Deferred_Ray_Info_init(rays.dat[i], type, ray, intensity, depth);
             break;
         }
     }
+    rays.tail = tail + 1;
 }
 
 void Rays_top(inout Rays rays, out Deferred_Ray_Info info) 
