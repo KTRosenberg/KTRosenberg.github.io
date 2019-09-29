@@ -23,6 +23,5 @@ uniform float uTime;
 
 void main() {
     gl_Position = /*uProj * uView * uModel * */ vec4(aPos, 1.0);
-    vPos = aPos;
-    
+    vPos = aPos * vec3(uResolution.x / uResolution.y, 1.0, 1.0);
 }
