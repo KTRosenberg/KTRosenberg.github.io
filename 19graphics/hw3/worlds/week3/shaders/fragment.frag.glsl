@@ -30,7 +30,7 @@ vec2 rotate_2D_point_around(const vec2 pt, const vec2 origin, const float angle)
 }
 
 const float RAYTRACE_OUTOFBOUNDS   = 1000.0;
-const int   RT_MAX_RECURSION_DEPTH = 2;
+const int   RT_MAX_RECURSION_DEPTH = 4;
 const int   RT_MAX_STEPS           = 4;
 const bool  enable_refraction      = true;
 const bool  enable_reflection      = true;
