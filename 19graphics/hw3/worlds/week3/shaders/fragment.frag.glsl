@@ -122,13 +122,13 @@ vec4 ambient;
 const int d_light_count = 2;
 Dir_Light d_light[MAX_D_LIGHT_COUNT];
 
-const int sphere_count = 3;
-Sphere spheres[MAX_SPHERE_COUNT];
+uniform int sphere_count;
+uniform Sphere spheres[MAX_SPHERE_COUNT];
 
-const int polyhedron_count = 2;
+uniform int polyhedron_count;
 Polyhedron polyhedra[MAX_POLYHEDRON_COUNT];
 
-const int plane_count = 1;
+uniform int plane_count;
 Plane planes[MAX_PLANE_COUNT];
 
 const int RT_TYPE_SPHERE     =  0;
@@ -226,13 +226,13 @@ void init(void)
         normalize(vec3(0.0,-1.,0.0))
     );
 
-    ambient = vec4(0.045, 0.02, 0.01, 1.0);
+    //ambient = vec4(0.045, 0.02, 0.01, 1.0);
 
 // initialize spheres
 
 
     float smv = 0.5 * sin(2.0 * uTime);
-
+    /*
     spheres[0] = Sphere(
         vec3(0.0 - sin(uTime), 1.5, 5.0 * sin(uTime)),
         0.5 ,//+ abs(noise(vec3(vPos.xy * sin(uTime), 0.0))), // NOTE: this doesn't affect the reflections -- would need to do transformation based on raytraced point
@@ -274,6 +274,7 @@ void init(void)
             vec4(vec3(0.5), IDX_REFRACT_FUSED_QUARTZ)
         )
     );
+    */
 
 // instantiate planes
    // make the plane react to the position
