@@ -1,11 +1,20 @@
 "use strict"
 
 let cursor;
+
+let matrixModule;
 let Matrix;
+// matrix stack
+window.mst = null;
+
 async function setup(state) {
 
-    Matrix = await import(getPath("matrix.js"));
-    console.log(Matrix.Matrix);
+    matrixModule = await import(getPath("matrix.js"));
+    
+    window.mst = new matrixModule.Dynamic_Matrix_Stack();
+    Matrix = matrixModule.Matrix;
+    window.Matrix = Matrix;
+    
 
     let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
         { 
@@ -104,19 +113,6 @@ async function setup(state) {
 
 // I HAVE IMPLEMENTED inverse() FOR YOU. FOR HOMEWORK, YOU WILL STILL NEED TO IMPLEMENT:
 // identity(), translate(x,y,z), rotateX(a), rotateY(a) rotateZ(a), scale(x,y,z), multiply(A,B)
-
-let inverse = src => {
-  let dst = [], det = 0, cofactor = (c, r) => {
-     let s = (i, j) => src[c+i & 3 | (r+j & 3) << 2];
-     return (c+r & 1 ? -1 : 1) * ( (s(1,1) * (s(2,2) * s(3,3) - s(3,2) * s(2,3)))
-                                 - (s(2,1) * (s(1,2) * s(3,3) - s(3,2) * s(1,3)))
-                                 + (s(3,1) * (s(1,2) * s(2,3) - s(2,2) * s(1,3))) );
-  }
-  for (let n = 0 ; n < 16 ; n++) dst.push(cofactor(n >> 2, n & 3));
-  for (let n = 0 ; n <  4 ; n++) det += src[n] * dst[n << 2];
-  for (let n = 0 ; n < 16 ; n++) dst[n] /= det;
-  return dst;
-}
 
 // NOTE: t is the elapsed time since system start in ms, but
 // each world could have different rules about time elapsed and whether the time
