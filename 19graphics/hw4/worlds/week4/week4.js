@@ -4,14 +4,14 @@ let cursor;
 
 let matrixModule;
 let Matrix;
-// matrix stack
-window.mst = null;
+// matrix stack hierarchy
+window.H = null;
 
 async function setup(state) {
 
     matrixModule = await import(getPath("matrix.js"));
     
-    window.mst = new matrixModule.Dynamic_Matrix_Stack();
+    window.H = new matrixModule.Dynamic_Matrix4x4_Stack();
     Matrix = matrixModule.Matrix;
     window.Matrix = Matrix;
     

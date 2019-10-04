@@ -1,5 +1,11 @@
 "use strict";
 
+function dot(v0, v1) {
+	return (v0[0] * v1[0]) +
+		   (v0[1] * v1[1]) +
+		   (v0[2] * v1[2]) +
+		   (v0[3] * v1[3]);
+}
 
 function inverse(src, dst) {
 	dst = dst || new Float32Array(src.length);
@@ -23,11 +29,11 @@ function inverse(src, dst) {
 	return dst;
 }
 
-class Dynamic_Matrix_Stack {
-	constructor(dimX = 4, dimY = 4, depth = 32) {
-		this.dimX  = dimX;
-		this.dimY  = dimY;
-		this.matSize = this.dimX * this.dimY;
+class Dynamic_Matrix4x4_Stack {
+	constructor(depth) {
+		depth = depth || 32;
+
+		this.matSize = 16;
 		this.depth = depth;
 
 		this.array_ = new Float32Array(this.matSize * this.depth);
@@ -36,9 +42,7 @@ class Dynamic_Matrix_Stack {
 
 		this.count = 1;
 
-		if (dimX === 4 && dimY === 4) {
-			Matrix.identity4x4(this.array_);
-		}
+		Matrix.identity4x4(this.array_);
 
 		this.updateCurrMatrix_();
 	}
@@ -87,11 +91,11 @@ class Dynamic_Matrix_Stack {
 	}
 }
 
-class Static_Matrix_Stack {
-	constructor(dimX = 4, dimY = 4, depth = 32) {
-		this.dimX  = dimX;
-		this.dimY  = dimY;
-		this.matSize = this.dimX * this.dimY;
+class Static_Matrix4x4_Stack {
+	constructor(depth) {
+		depth = depth || 32;
+
+		this.matSize = 16;
 		this.depth = depth;
 
 		this.array_ = new Float32Array(this.matSize * this.depth);
@@ -100,9 +104,7 @@ class Static_Matrix_Stack {
 
 		this.count = 1;
 
-		if (dimX === 4 && dimY === 4) {
-			Matrix.identity4x4(this.array_);
-		}
+		Matrix.identity4x4(this.array_);
 
 		this.updateCurrMatrix_();
 	}
@@ -204,7 +206,7 @@ class Matrix {
 		return dst;
 	}
 
-	static idx2d(mat, col, row) {
+	static idx2d(mat, row, col) {
 		return mat[(col * 4) + row];
 	}
 
@@ -267,6 +269,10 @@ class Matrix {
 		return Matrix.identity4x4(src);
 	}
 
+	static rotation_matrix(src, x, y, z) {
+		// TODO
+		return src;
+	}
 	static rotate(src, x, y, z) {
 		return src;
 	}
@@ -283,12 +289,29 @@ class Matrix {
 		return Matrix.rotate(src, 0, 0, z);
 	}
 
+	static translation_matrix(x, y, z) {
+		const buf = Matrix.identity(Matrix.matBufXform);
+
+		buf[12] = x;
+		buf[13] = y;
+		buf[14] = z;
+
+		return buf;
+	}
 
 	static translate(src, x, y, z) {
-		return src;
+		return Matrix.multiply(
+			src, 
+			Matrix.translation_matrix(x, y, z), 
+			src
+		);
 	}
 	static translateV(src, xyz) {
-		return src;
+		return Matrix.multiply(
+			src, 
+			Matrix.translation(xyz[0], xyz[1], xyz[2]), 
+			src
+		);
 	}
 	static translateX(src, x) {
 		return Matrix.translate(src, x, 0, 0);
@@ -300,11 +323,28 @@ class Matrix {
 		return Matrix.translate(src, 0, 0, z);
 	}
 
-	static scale(src, x, y, z) {
-		return src;
+	static scale_matrix(x, y, z) {
+		const buf = Matrix.identity(Matrix.matBufXform);
+
+		buf[0]  = x;
+		buf[5]  = y;
+		buf[10] = z;
+
+		return buf;		
 	}
-	static scaleV(src, x, y, z) {
-		return src;
+	static scale(src, x, y, z) {
+		return Matrix.multiply(
+			src,
+			Matrix.scale_matrix(x, y, z),
+			src
+		);
+	}
+	static scaleV(src, xyz) {
+		return Matrix.multiply(
+			src,
+			Matrix.scale_matrix(xyz[0], xyz[1], xyz[2]),
+			src
+		);
 	}
 	static scaleX(src, x) {
 		return Matrix.scale(src, x, 0, 0);
@@ -316,7 +356,7 @@ class Matrix {
 		return Matrix.scale(src, 0, 0, z);
 	}
 
-	static matBuf = new Float32Array(16);
+
 
 
 /*
@@ -349,12 +389,7 @@ for (int row=0;row<4;row++) {
   }
 }
 */
-	static dot(v0, v1) {
-		return (v0[0] * v1[0]) +
-			   (v0[1] * v1[1]) +
-			   (v0[2] * v1[2]) +
-			   (v0[3] * v1[3]);
-	}
+
 	static multiply(A, B, dst) {
 		dst = dst || A;
 
@@ -373,7 +408,7 @@ for (int row=0;row<4;row++) {
 				vBuf1[2] = B[colIdx + 2];
 				vBuf1[3] = B[colIdx + 3];
 
-				matBuf[r + colIdx] = dot(vBuf0, vBuf1);
+				matBuf[colIdx + r] = dot(vBuf0, vBuf1);
 			}
 		}
 
@@ -417,4 +452,7 @@ for (int row=0;row<4;row++) {
 	}
 }
 
-export {Matrix, Dynamic_Matrix_Stack, Static_Matrix_Stack};
+Matrix.matBuf      = new Float32Array(16);
+Matrix.matBufXform = new Float32Array(16);
+
+export {Matrix, Dynamic_Matrix4x4_Stack, Static_Matrix4x4_Stack};

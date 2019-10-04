@@ -178,7 +178,12 @@ window.VRCanvasWrangler = (function() {
       }
 
       if (options.setup) {
-        await options.setup(this.customState, this, this._session);
+        // try {
+          await options.setup(this.customState, this, this._session);
+        // } catch (e) {
+        //   console.error(e);
+        //   throw new Error("setup unsuccessful");
+        // }
       }
 
       this.start();

@@ -135,7 +135,8 @@ default: {
           setPath(getCurrentPath(src));
 
           const world = await import(src);
-          MR.wrangler.configure(world.default()).catch(err => {
+          MR.wrangler.beginSetup(world.default()).catch(err => {
+              console.trace();
               console.error(err);
           });
         } catch (err) {
