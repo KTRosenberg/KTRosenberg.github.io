@@ -52,6 +52,12 @@ function vec3_normalize(arr, out) {
     return out;
 }
 
+function vec3_dot(v0, v1) {
+    return (v0[0] * v1[0]) +
+           (v0[1] * v1[1]) +
+           (v0[2] * v1[2]);
+}
+
 function sin01(val) {
     return (1.0 + sin(val)) / 2.0;
 }
@@ -281,7 +287,7 @@ let polyhedra = [
         8,
         new Material(
             [0.01, 0.2, 0.01],
-            [0.67, 0.0, 0.02],
+            [0.27, 0.0, 0.2],
             [0.01, 0.2, 0.6],
             10.0,
             [1.0, 1.0, 1.0, 1.0],
@@ -331,6 +337,7 @@ async function setup(state) {
         throw new Error("Could not load shader library");
     }
 
+    state.velBouncy = new Float32Array([1.0 + Math.max(0.001, Math.random()), 1.0 + Math.max(0.0001), 0.0 * -Math.max(0.0001)]);
     // load vertex and fragment shaders from the server, register with the editor
     let shaderSource = await MREditor.loadAndRegisterShaderForLiveEditing(
         gl,
@@ -381,7 +388,7 @@ async function setup(state) {
                 state.uViewLoc         = gl.getUniformLocation(program, 'uView');
             
                 gl.uniform4fv(gl.getUniformLocation(program, "ambient"), [0.045, 0.12, 0.1, 1.0]);
-                gl.uniform1i(gl.getUniformLocation(program,  "sphere_count"),     0);
+                gl.uniform1i(gl.getUniformLocation(program,  "sphere_count"),     3);
                 gl.uniform1i(gl.getUniformLocation(program,  "polyhedron_count"), 2);
                 gl.uniform1i(gl.getUniformLocation(program,  "plane_count"),      0);
 
@@ -451,6 +458,19 @@ let dt = 0;
 Math.clamp = (low, high, val) => {
     return Math.max(0.0, Math.min(val, 2.0));
 }
+
+function reflect(I, N) {
+    const dotprod = vec3_dot(N, I);
+
+    N[0] *= dotprod * 2;
+    N[1] *= dotprod * 2;
+    N[2] *= dotprod * 2;
+
+    I[0] -= N[0];
+    I[1] -= N[1];
+    I[2] -= N[2];
+}
+
 function onStartFrame(t, state) {
 
     let tStart = t;
@@ -522,11 +542,6 @@ function onStartFrame(t, state) {
                     sphere.xform.inverse = H.matrix();
                     sphere.xform.upload.all();
 
-                    window.A = sphere.xform.model;
-                    window.B = sphere.xform.inverse;
-                    H.save();
-                        window.I = Matrix.multiply(A, B, H.matrix());
-                    H.restore();
                 H.restore();
             H.restore();
         }
@@ -535,8 +550,8 @@ function onStartFrame(t, state) {
         const cursorVal = cursorValue();
         {
             const ph = polyhedra[0];
-            ph.center[0] = 0.0;
-            ph.center[1] = -1;
+            //ph.center[0] = 0.0;
+            //ph.center[1] = -1;
             ph.upload.center();
 
             {
@@ -549,9 +564,56 @@ function onStartFrame(t, state) {
 
                 
                 const atn = Math.atan2(cursorVal[1], cursorVal[0]);
-                Matrix.translate(H.matrix(), 0.0, 0.0, -1.0);
+                Matrix.translate(H.matrix(), ph.center[0], ph.center[1], -1.0 + ph.center[2]);
                 Matrix.rotateY(H.matrix(), cursorVal[0] * Math.PI);
                 Matrix.rotateX(H.matrix(), -cursorVal[1] * Math.PI);
+
+                
+                let cx = ph.center[0];
+                let cy = ph.center[1];
+                let cz = ph.center[2];
+
+                let N = null;
+
+                cx += state.velBouncy[0] * dt;
+                if (cx > 1.0 && state.velBouncy[0] > 0.0) {
+                    //I - 2.0 * dotprod * N
+                    N = [-1.0, 0.0, 0.0];
+                    reflect(state.velBouncy, N);
+                } else if (cx < -1.0 && state.velBouncy[0] < 0.0) {
+                    //I - 2.0 * dotprod * N
+                    N = [1.0, 0.0, 0.0];
+                    reflect(state.velBouncy, N);
+                }
+
+                cy += state.velBouncy[1] * dt;
+                if (cy > 1.0 && state.velBouncy[1] > 0.0) {
+                    //I - 2.0 * dotprod * N
+                    N = [0.0, -1.0, 0.0];
+                    reflect(state.velBouncy, N);
+
+                } else if (cy < -1.0 && state.velBouncy[1] < 0.0) {
+                    //I - 2.0 * dotprod * N
+                    N = [0.0, 1.0, 0.0];
+                    reflect(state.velBouncy, N);
+                }
+
+
+                cz += state.velBouncy[2] * dt;
+                if (cz > 0.0 && state.velBouncy[2] > 0.0) {
+                    //I - 2.0 * dotprod * N
+                    N = [0.0, 0.0, -1.0];
+                    reflect(state.velBouncy, N);
+
+                } else if (cz < -5.0 && state.velBouncy[2] < 0.0) {
+                    //I - 2.0 * dotprod * N
+                    N = [0.0, 0.0, 1.0];
+                    reflect(state.velBouncy, N);
+                }
+
+                ph.center[0] = cx;
+                ph.center[1] = cy;
+                ph.center[2] = cz;
 
                 //Matrix.scale(H.matrix(), .2, 2 * 1. , 2 * 1.);
 

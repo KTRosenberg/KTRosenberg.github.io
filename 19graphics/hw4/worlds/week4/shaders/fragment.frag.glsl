@@ -123,7 +123,7 @@ void Polyhedron_init(inout Polyhedron poly, vec3 center, float r, int plane_coun
 
 #define MAX_SPHERE_COUNT  (3)
 #define MAX_PLANE_COUNT  (1)
-#define MAX_POLYHEDRON_COUNT (2)
+#define MAX_POLYHEDRON_COUNT (6)
 #define MAX_D_LIGHT_COUNT (2)
 #define MAX_P_LIGHT_COUNT (1)
 
