@@ -19,7 +19,7 @@ float sin01(float v) {
 #define PI 3.1415926535897932384626433832795
 
 
-
+#define ORIGIN vec4(0.0, 0.0, 0.0, 0.0)
 
 // Note, in practice it would make more sense to send a constant/uniform
 // to the GPU with the pre-computed cos/sin values to avoid calculating the
@@ -76,7 +76,10 @@ const float IDX_REFRACT_DIAMOND      = 2.417;
 const float IDX_REFRACT_SAPPHIRE     = 1.77;
 const float IDX_REFRACT_FUSED_QUARTZ = 1.46;
 
-
+struct Transform {
+    mat4 model;
+    mat4 inverse;
+};
 
 struct Dir_Light {
     vec3 color;
@@ -91,6 +94,7 @@ struct Point_Light {
 struct Sphere {
     vec3     center;
     float    r;
+    Transform xform;
     Material mat;    
 };
 
@@ -107,6 +111,7 @@ struct Polyhedron {
     int   plane_count;
     Material mat;
     vec4  planes[MAX_POLY_PLANES];
+    Transform xform;
 };
 void Polyhedron_init(inout Polyhedron poly, vec3 center, float r, int plane_count, in Material mat)
 {
@@ -188,8 +193,8 @@ void on_reflection_noisy_ocean(inout Ray r, inout Raytrace_Result res)
 
 }
 
-#define RT_FX_PROC_ON_REFLECTION_1
-#define RT_FX_PROC_ON_REFLECTION_2
+#define RT_FX_PROC_ON_REFLECTION_1 on_reflection_default
+#define RT_FX_PROC_ON_REFLECTION_2 on_reflection_noisy_ocean
 #define RT_FX_PROC_ON_REFLECTION_3
 #define RT_FX_PROC_ON_REFLECTION_4
 #define RT_FX_PROC_ON_REFLECTION_5
@@ -258,14 +263,12 @@ void init(void)
 // initialize world lights
     d_light[0] = Dir_Light(
         vec3(.5,.5,1.0),
-        normalize(-vec3(sin01(-uTime),sin01(-uTime),1.))
+        normalize(vec3(sin01(uTime),sin01(uTime),-1.0))
     );
     d_light[1] = Dir_Light(
         vec3(1.0,.1,.1),
-        normalize(vec3(0.0,-1.,0.0))
+        normalize(vec3(0.0,-1.0,0.0))
     );
-
-    //ambient = vec4(0.045, 0.02, 0.01, 1.0);
 
 // initialize spheres
 
@@ -526,8 +529,7 @@ bool raytrace_polyhedron(out float t, in Ray ray, in Polyhedron P, out Raytrace_
 
     bool a_halfspace_was_missed = false;
 
-    Ray_init(ray, ray.V - P.center, ray.W);
-
+    Ray_init(ray, ray.V - (P.xform.model * ORIGIN).xyz, ray.W);
     for (int i = 0; i < MAX_POLY_PLANES; i += 1) {
         if (i == P.plane_count) {
             break;
@@ -535,8 +537,8 @@ bool raytrace_polyhedron(out float t, in Ray ray, in Polyhedron P, out Raytrace_
 
         float t = RAYTRACE_OUTOFBOUNDS;
         int hs_case = -1;
-
-        raytrace_halfspace(t, hs_case, ray, P.planes[i]);
+        vec4 hs = P.planes[i] * P.xform.inverse;
+        raytrace_halfspace(t, hs_case, ray, hs);
 
         switch (hs_case) {
         case RT_HS_CASE_OUTSIDE_MISSED: {
@@ -1069,6 +1071,17 @@ bool verify()
 {
     bool v = true;
     #define cl(stmnt) v = v && stmnt
+
+    Polyhedron S = polyhedra[0];
+
+    cl(S.xform.model == mat4(
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.5, 0.5, 0.0, 1.0
+    ));
+
+    cl(S.xform.model * S.xform.inverse == mat4(1.0));
 
     return v;
 

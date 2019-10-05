@@ -693,7 +693,7 @@ const MREditor = (function() {
                         v.compile();
                     }
 
-                }, MREditor.recompileDelayDefault);
+                }, 0);
             });
 
             if (MREditor.insertTextSupported) {
@@ -755,10 +755,10 @@ const MREditor = (function() {
                     toWatch.push(saveTo);
                     MR.server.subsLocal.subscribe("Update_File", (filename, args) => {
                         if (args.file !== filename) {
-                            console.log("file does not match");
+                            //console.log("file does not match");
                             return;
                         }
-                        console.log("updating file");
+                        //console.log("updating file");
 
                         const textE = textAreaElements[prop]
                         if (textE) {
@@ -1347,7 +1347,7 @@ const MREditor = (function() {
                         }
 
                         compile();
-                    }, record.hasError ? 100 :  MREditor.recompileDelayDefault);
+                    }, record.hasError ? 100 :  0);
                 })
 
                 if (MREditor.insertTextSupported) {
@@ -1411,10 +1411,10 @@ const MREditor = (function() {
                     toWatch.push(saveTo);
                     MR.server.subsLocal.subscribe("Update_File", (filename, args) => {
                         if (args.file !== filename) {
-                            console.log("file does not match");
+                            //console.log("file does not match");
                             return;
                         }
-                        console.log("updating file");
+                        //console.log("updating file");
 
                         const textE = textAreaElements[prop]; 
                         if (textE) {

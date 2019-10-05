@@ -1,6 +1,10 @@
 "use strict"
 
-"use strict"
+let rtModule = null;
+
+// matrix stack hierarchy / memory arena
+let H = null;
+let MArena = null;
 
 const vec40   = new Float32Array([0.0, 0.0, 0.0, 0.0]);
 const vec40W1 = new Float32Array([0.0, 0.0, 0.0, 1.0]);
@@ -32,7 +36,7 @@ const GLSL_TYPE_BOOL  = 10;
 const cos = Math.cos;
 const sin = Math.sin;
 
-function vec3_normalize(arr) {
+function vec3_normalize(arr, out) {
     const x = arr[0];
     const y = arr[1];
     const z = arr[2];
@@ -41,11 +45,11 @@ function vec3_normalize(arr) {
     if (len > 0) {
         len = 1 / Math.sqrt(len);
     }
-    arr[0] = arr[0] * len;
-    arr[1] = arr[1] * len;
-    arr[2] = arr[2] * len;
+    out[0] = arr[0] * len;
+    out[1] = arr[1] * len;
+    out[2] = arr[2] * len;
 
-    return arr;
+    return out;
 }
 
 function sin01(val) {
@@ -63,6 +67,8 @@ class Polyhedron {
         for (let i = 0; i < plane_count; i += 1) {
             this.planesArray.push(this.planes.subarray((i * 4), ((i + 1) * 4)));
         }
+
+        this.xform = new Transform();
     }
 
     setUniforms(prefix, program) {
@@ -98,6 +104,7 @@ class Polyhedron {
             this.upload.planes();
         };
         this.mat.setUniforms(prefix + ".mat", program);
+        this.xform.setUniforms(prefix + ".xform", program);
     }
 }
 
@@ -106,6 +113,7 @@ class Sphere {
         this.center = center;
         this.r      = r;
         this.mat    = mat;
+        this.xform  = new Transform();
     }
 
     setUniforms(prefix, program) {
@@ -124,7 +132,8 @@ class Sphere {
             this.upload.center();
             this.upload.r();
         };
-        this.mat.setUniforms(prefix + ".mat", program);
+        this.mat.setUniforms(prefix   + ".mat",   program);
+        this.xform.setUniforms(prefix + ".xform", program);
     }
 }
 class Material {
@@ -135,7 +144,6 @@ class Material {
         this.spec_pow = spec_pow;
         this.reflection = reflection;
         this.refraction = refraction;
-
     }
     setUniforms(prefix, program) {
         this.locations = {};
@@ -171,7 +179,36 @@ class Material {
     }
 }
 
-const spheres = [
+class Transform {
+    constructor(model, inverse) {
+        this.model   = model;
+        this.inverse = inverse;
+    }
+
+    setUniforms(prefix, program) {
+        this.locations = {};
+        this.locations.model   = gl.getUniformLocation(program, prefix + ".model");
+        this.locations.inverse = gl.getUniformLocation(program, prefix + ".inverse");
+
+
+        this.upload = {};
+
+        this.upload.model = () => {
+            gl.uniformMatrix4fv(this.locations.model, false, this.model);
+        };
+
+        this.upload.inverse = () => {
+            gl.uniformMatrix4fv(this.locations.inverse, false, this.inverse);
+        };
+
+        this.upload.all = () => {
+            this.upload.model();
+            this.upload.inverse();
+        };
+    }
+}
+
+let spheres = [
     new Sphere(
         [0.0, 1.5, 0.0],
         0.5,
@@ -212,29 +249,29 @@ const spheres = [
     )
 ];
 
-let r = 0.5;
+let r = 0.2;
 let r3 = 1.0 / Math.sqrt(r);
 
-const polyhedra = [
+let polyhedra = [
     new Polyhedron(
-        [0.0, 0.0, -10.0],
-        0.5,
+        [0.0, 0.0, 0.0],
+        r,
         6,
         new Material(
             [1.0, 1.0, 1.0],
             [1.0, 1.0, 1.0],
             [0.02, 0.0124, 1.0],
-            6.0,
+            0.02,
             [1.0, 1.0, 1.0, 1.0],
             [0.5, 0.5, 0.5, IDX_REFRACT_FUSED_QUARTZ]
         ),
         new Float32Array([
-           -1.0,  0.0,  0.0, -0.5,
-            1.0,  0.0,  0.0, -0.5,
-            0.0, -1.0,  0.0, -0.5,
-            0.0,  1.0,  0.0, -0.5,
-            0.0,  0.0, -1.0, -0.5,
-            0.0,  0.0,  1.0, -0.5,
+           -1.0,  0.0,  0.0, -r,
+            1.0,  0.0,  0.0, -r,
+            0.0, -1.0,  0.0, -r,
+            0.0,  1.0,  0.0, -r,
+            0.0,  0.0, -1.0, -r,
+            0.0,  0.0,  1.0, -r,
         ])
     ),
 
@@ -267,15 +304,18 @@ let cursor;
 
 let matrixModule;
 let Matrix;
-// matrix stack hierarchy
-let H = null;
+
 
 async function setup(state) {
 
     matrixModule = await import(getPath("matrix.js"));
     
     Matrix = matrixModule.Matrix;
+    window.Matrix = Matrix;
     H      = new matrixModule.Dynamic_Matrix4x4_Stack();
+    window.H = H;
+    MArena = new matrixModule.Dynamic_Matrix4x4_Stack();
+    window.MArena = MArena;
     
 
     let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
@@ -340,9 +380,9 @@ async function setup(state) {
                 state.uTimeLoc         = gl.getUniformLocation(program, 'uTime');
                 state.uViewLoc         = gl.getUniformLocation(program, 'uView');
             
-                gl.uniform4fv(gl.getUniformLocation(program, "ambient"), [0.045, 0.02, 0.01, 1.0]);
-                gl.uniform1i(gl.getUniformLocation(program,  "sphere_count"),     3);
-                gl.uniform1i(gl.getUniformLocation(program,  "polyhedron_count"), 0);
+                gl.uniform4fv(gl.getUniformLocation(program, "ambient"), [0.045, 0.12, 0.1, 1.0]);
+                gl.uniform1i(gl.getUniformLocation(program,  "sphere_count"),     0);
+                gl.uniform1i(gl.getUniformLocation(program,  "polyhedron_count"), 2);
                 gl.uniform1i(gl.getUniformLocation(program,  "plane_count"),      0);
 
                 for (let i = 0; i < spheres.length; i += 1) {
@@ -351,6 +391,9 @@ async function setup(state) {
                     sphere.setUniforms(prefix, program);
                     sphere.upload.all();
                     sphere.mat.upload.all();
+                    sphere.xform.model   = H.pushIdentity();
+                    sphere.xform.inverse = H.pushIdentity();
+                    sphere.xform.upload.all();
                 }
 
                 for (let i = 0; i < polyhedra.length; i += 1) {
@@ -359,6 +402,9 @@ async function setup(state) {
                     polyhedron.setUniforms(prefix, program);
                     polyhedron.upload.all();
                     polyhedron.mat.upload.all();
+                    polyhedron.xform.model = H.pushIdentity();
+                    polyhedron.xform.inverse = H.pushIdentity();
+                    polyhedron.xform.upload.all();
                 }
             } 
         },
@@ -398,12 +444,20 @@ async function setup(state) {
 // NOTE: t is the elapsed time since system start in ms, but
 // each world could have different rules about time elapsed and whether the time
 // is reset after returning to the world
+
+let prevTime = 0;
+let dt = 0;
+
+Math.clamp = (low, high, val) => {
+    return Math.max(0.0, Math.min(val, 2.0));
+}
 function onStartFrame(t, state) {
 
     let tStart = t;
     if (!state.tStart) {
         state.tStart = t;
         state.time = t;
+        prevTime = 0;
     }
 
     let cursorValue = () => {
@@ -414,6 +468,8 @@ function onStartFrame(t, state) {
     tStart = state.tStart;
 
     let now = (t - tStart);
+    dt = (now - prevTime) / 1000.0;
+    prevTime = now;
     // different from t, since t is the total elapsed time in the entire system, best to use "state.time"
     state.time = now;
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -424,6 +480,8 @@ function onStartFrame(t, state) {
     gl.uniform1f (state.uTimeLoc       , time);
 
     gl.enable(gl.DEPTH_TEST);
+
+    H.clear();
 
     const smv = 0.5 * sin(2.0 * time);
 
@@ -452,78 +510,150 @@ function onStartFrame(t, state) {
         spheres[0].upload.center();
         spheres[1].upload.center();
         spheres[2].upload.center();
+
+        for (let i = 0; i < 3; i += 1) {
+            const sphere = spheres[i];
+            H.save();
+                Matrix.translateV(H.matrix(), sphere.center);
+                Matrix.scale(H.matrix(), sphere.r * 2, sphere.r * 2, sphere.r * 2);
+                sphere.xform.model = H.matrix();
+                H.save();
+                    Matrix.inverse(H.matrix());
+                    sphere.xform.inverse = H.matrix();
+                    sphere.xform.upload.all();
+
+                    window.A = sphere.xform.model;
+                    window.B = sphere.xform.inverse;
+                    H.save();
+                        window.I = Matrix.multiply(A, B, H.matrix());
+                    H.restore();
+                H.restore();
+            H.restore();
+        }
     }
     {
+        const cursorVal = cursorValue();
         {
             const ph = polyhedra[0];
-            ph.center[1] = sin01Time;
+            ph.center[0] = 0.0;
+            ph.center[1] = -1;
             ph.upload.center();
 
-            const pl = ph.planesArray[5];
-            pl[0] = 0.0;
-            pl[1] = 0.0;
-            pl[2] = 1.0;
-            pl[3] = -0.5 - (10.0 * sin01Time);
-            ph.upload.planeAt(5);
+            {
+            H.save();
+                const xform = ph.xform;
+            
+                //Matrix.rotateZ(H.matrix(), time);
+                //Matrix.translateY(H.matrix(), -0.5);
+                //Matrix.rotateX(H.matrix(), time);
+
+                
+                const atn = Math.atan2(cursorVal[1], cursorVal[0]);
+                Matrix.translate(H.matrix(), 0.0, 0.0, -1.0);
+                Matrix.rotateY(H.matrix(), cursorVal[0] * Math.PI);
+                Matrix.rotateX(H.matrix(), -cursorVal[1] * Math.PI);
+
+                //Matrix.scale(H.matrix(), .2, 2 * 1. , 2 * 1.);
+
+                xform.model = H.matrix();
+                H.save();
+                    Matrix.inverse(H.matrix());
+                    xform.inverse = H.matrix();
+                    xform.upload.all();
+                H.restore();
+            H.restore();
+            }
         }
         {
             const ph = polyhedra[1];
-            ph.center[0] = cosTime;
-            ph.center[1] = sin01Time;
-            ph.center[2] = 0.0;
 
             ph.upload.center();
 
-            ph.r = sin01(-time);
-            const mr = -ph.r;
-            r3 = 1.0 / Math.sqrt(r);
-            const mr3 = -r3;
+            // ph.r = sin01(-time);
+            // const mr = -ph.r;
+            // r3 = 1.0 / Math.sqrt(r);
+            // const mr3 = -r3;
 
-            const pl = ph.planesArray;
+            // const pl = ph.planesArray;
 
-            pl[0][0] = mr3;
-            pl[0][1] = mr3;
-            pl[0][2] = mr3;
-            pl[0][3] = mr;
+            // pl[0][0] = mr3;
+            // pl[0][1] = mr3;
+            // pl[0][2] = mr3;
+            // pl[0][3] = mr;
 
-            pl[1][0] = r3;
-            pl[1][1] = mr3;
-            pl[1][2] = mr3;
-            pl[1][3] = mr;
+            // pl[1][0] = r3;
+            // pl[1][1] = mr3;
+            // pl[1][2] = mr3;
+            // pl[1][3] = mr;
 
-            pl[2][0] = mr3;
-            pl[2][1] = r3;
-            pl[2][2] = mr3;
-            pl[2][3] = mr;
+            // pl[2][0] = mr3;
+            // pl[2][1] = r3;
+            // pl[2][2] = mr3;
+            // pl[2][3] = mr;
 
-            pl[3][0] = r3;
-            pl[3][1] = r3;
-            pl[3][2] = mr3;
-            pl[3][3] = mr;
+            // pl[3][0] = r3;
+            // pl[3][1] = r3;
+            // pl[3][2] = mr3;
+            // pl[3][3] = mr;
 
-            pl[4][0] = mr3;
-            pl[4][1] = mr3;
-            pl[4][2] = r3;
-            pl[4][3] = mr;
+            // pl[4][0] = mr3;
+            // pl[4][1] = mr3;
+            // pl[4][2] = r3;
+            // pl[4][3] = mr;
 
-            pl[5][0] = r3;
-            pl[5][1] = mr3;
-            pl[5][2] = r3;
-            pl[5][3] = mr;
+            // pl[5][0] = r3;
+            // pl[5][1] = mr3;
+            // pl[5][2] = r3;
+            // pl[5][3] = mr;
 
-            pl[6][0] = mr3;
-            pl[6][1] = r3;
-            pl[6][2] = r3;
-            pl[6][3] = mr;
+            // pl[6][0] = mr3;
+            // pl[6][1] = r3;
+            // pl[6][2] = r3;
+            // pl[6][3] = mr;
 
-            pl[7][0] = r3;
-            pl[7][1] = r3;
-            pl[7][2] = r3;
-            pl[7][3] = mr;
+            // pl[7][0] = r3;
+            // pl[7][1] = r3;
+            // pl[7][2] = r3;
+            // pl[7][3] = mr;
 
-            ph.upload.all();
+            //ph.upload.all();
+
+
+            {
+            H.save();
+                const xform = ph.xform;
+            
+                //Matrix.rotateZ(H.matrix(), time);
+                //Matrix.translateY(H.matrix(), -0.5);
+                
+                let dx = ph.center[0] - cursorVal[0];
+                let dy = ph.center[1] - cursorVal[1];
+
+                ph.center[0] -= dx * dt;
+                ph.center[1] -= dy * dt;
+
+                const dist2 = Math.sqrt((dx * dx) + (dy * dy));
+
+
+
+                Matrix.translate(H.matrix(), ph.center[0], ph.center[1], 0.0);
+                Matrix.rotateZ(H.matrix(), time * 2);
+                Matrix.rotateX(H.matrix(), time * 2);
+                Matrix.rotateY(H.matrix(), time * 2);
+                Matrix.scale(H.matrix(), (dist2 + sin01Time) * 2.0, (dist2 + sin01Time) * 2.0, (dist2 + sin01Time) * 2.0);
+
+                xform.model = H.matrix();
+                H.save();
+                    Matrix.inverse(H.matrix());
+                    xform.inverse = H.matrix();
+                    xform.upload.all();
+                H.restore();
+            H.restore();
+            }
         }
     }
+
+
 }
 
 
@@ -531,23 +661,18 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     const sec = state.time / 1000;
 
     const my = state;
-  
-
-    H.save();
-
-    // Matrix.translate(H.matrix(), Math.sin(sec), 0.0, 0.0);
     // Matrix.rotateZ(H.matrix(), sec, 0.0, 0.0);
     // Matrix.scale(H.matrix(), Math.abs(Math.cos(sec)), Math.abs(Math.cos(sec)), 1.0);
 
-    gl.uniformMatrix4fv(my.uModelLoc, false, Matrix.translate(H.matrix(), 0, 0, -1));
+    gl.uniformMatrix4fv(my.uModelLoc, false, H.matrix());
     gl.uniformMatrix4fv(my.uViewLoc,  false, new Float32Array(viewMat));
     gl.uniformMatrix4fv(my.uProjLoc,  false, Matrix.orthographic(H.matrix()));
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-    H.restore();
+    
 }
 
-function onEndFrame(t, state) {
+function onEndFrame(t, state) {;
 }
 
 export default function main() {

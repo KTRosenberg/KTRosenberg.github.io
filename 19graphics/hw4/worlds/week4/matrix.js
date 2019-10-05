@@ -8,8 +8,10 @@ function dot(v0, v1) {
 }
 
 function inverse(src, dst) {
-	dst = dst || new Float32Array(src.length);
+	let finalDst = dst || src;
 	let det = 0;
+
+	dst = Matrix.matBuf;
 
 	const cofactor = (c, r) => {
 		const s = (i, j) => src[c+i & 3 | (r+j & 3) << 2];
@@ -26,7 +28,9 @@ function inverse(src, dst) {
 	for (let n = 0 ; n < 16 ; n++) {
 		dst[n] /= det;
 	}
-	return dst;
+
+	finalDst.set(dst);
+	return finalDst;
 }
 
 class Dynamic_Matrix4x4_Stack {
@@ -76,6 +80,26 @@ class Dynamic_Matrix4x4_Stack {
 			this.matrix(), 
 			prevMat
 		);
+
+		return this.matrix();
+	}
+	pushIdentity() {
+		if (this.topIdx >= this.array_.length) {
+			const saved = this.array_;
+			const larger = new Float32Array(this.topIdx * 2);
+			larger.set(saved);
+			
+			this.array_ = larger;
+		}
+
+		this.topIdx += this.matSize;
+		this.count += 1;
+
+		this.updateCurrMatrix_();
+		 
+		Matrix.identity(this.matrix());
+
+		return this.matrix();
 	}
 	restore() {
 		if (this.count < 2) {
@@ -87,9 +111,20 @@ class Dynamic_Matrix4x4_Stack {
 		this.count -= 1;
 
 		this.updateCurrMatrix_();
+
+		return this.matrix();
 	}
 	matrix() {
 		return this.currMatrix_;
+	}
+	clear() {
+		this.topIdx = this.matSize;
+
+		this.count = 1;
+
+		this.updateCurrMatrix_();
+		
+		Matrix.identity4x4(this.array_);
 	}
 }
 
@@ -133,16 +168,39 @@ class Static_Matrix4x4_Stack {
 			prevMat
 		);
 
-		console.log(this.matrix(), prevMat);
+		return this.matrix();
 	}
+
+	pushIdentity() {
+		this.topIdx += this.matSize;
+		this.count += 1;
+
+		this.updateCurrMatrix_();
+		 
+		Matrix.identity(this.matrix());
+
+		return this.matrix();
+	}
+
 	restore() {
 		this.topIdx -= this.matSize;
 		this.count -= 1;
 
 		this.updateCurrMatrix_();
+
+		return this.matrix();
 	}
 	matrix() {
 		return this.currMatrix_;
+	}
+	clear() {
+		this.topIdx = this.matSize;
+
+		this.count = 1;
+
+		this.updateCurrMatrix_();
+		
+		Matrix.identity4x4(this.array_);
 	}
 }
 
@@ -151,8 +209,9 @@ const vBuf0 = vBuf.subarray(0, 4);
 const vBuf1 = vBuf.subarray(4, 8);
 
 class Matrix {
-	static inverse(dst, src) {
-		return inverse(src, dst);
+	static inverse(src, dst) {
+		Matrix.identity(Matrix.matBuf);
+		return inverse(src);
 	}
 
 	static transpose(dst, src) {
@@ -353,7 +412,7 @@ class Matrix {
 	static translateV(src, xyz) {
 		return Matrix.multiply(
 			src, 
-			Matrix.translation(xyz[0], xyz[1], xyz[2]), 
+			Matrix.translation_matrix(xyz[0], xyz[1], xyz[2]), 
 			src
 		);
 	}

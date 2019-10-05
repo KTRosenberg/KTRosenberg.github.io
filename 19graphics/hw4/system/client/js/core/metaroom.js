@@ -150,7 +150,7 @@ MR.initServer = () => {
 
 
     MR.server.sock.addEventListener('message', (ev) => {
-      console.log("received message from server");
+      //console.log("received message from server");
 
       const data = JSON.parse(ev.data);
       if (data.MR_Message) {
