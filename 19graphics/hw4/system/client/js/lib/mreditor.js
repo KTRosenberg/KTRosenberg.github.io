@@ -764,6 +764,7 @@ const MREditor = (function() {
                         if (textE) {
                             record.args[prop] = args.content;
                             textE.value = args.content;
+
                             for (const v of this.shaderMap.values()) {
                                 v.compile();
                             }
@@ -1573,7 +1574,7 @@ const MREditor = (function() {
                 console.warn("First-time compilation failed, using default error condition shader");
                 const defaultErrVertex = `#version 300 es
                 precision highp float;
-
+                
                 void main() {
                   // Multiply the position by the matrix.
                   gl_Position = vec4(vec3(0.0), 1.0);

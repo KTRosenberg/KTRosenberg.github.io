@@ -45,6 +45,8 @@ class Dynamic_Matrix4x4_Stack {
 		Matrix.identity4x4(this.array_);
 
 		this.updateCurrMatrix_();
+
+		this.save();
 	}
 
 	updateCurrMatrix_() {
@@ -76,7 +78,7 @@ class Dynamic_Matrix4x4_Stack {
 		);
 	}
 	restore() {
-		if (this.topIdx - this.matSize <= 0) {
+		if (this.count < 2) {
 			console.warn("unexpected restore operation, matrix stack empty");
 			return;
 		} 
@@ -107,6 +109,8 @@ class Static_Matrix4x4_Stack {
 		Matrix.identity4x4(this.array_);
 
 		this.updateCurrMatrix_();
+
+		this.save();
 	}
 
 	updateCurrMatrix_() {
@@ -128,6 +132,8 @@ class Static_Matrix4x4_Stack {
 			this.matrix(), 
 			prevMat
 		);
+
+		console.log(this.matrix(), prevMat);
 	}
 	restore() {
 		this.topIdx -= this.matSize;
@@ -269,24 +275,62 @@ class Matrix {
 		return Matrix.identity4x4(src);
 	}
 
-	static rotation_matrix(src, x, y, z) {
-		// TODO
-		return src;
+	static rotationX_matrix(rad) {
+		const buf = Matrix.identity(Matrix.matBufXform);
+		
+		const c = Math.cos(rad);
+		const s = Math.sin(rad);
+		buf[5]  =  c;
+		buf[6]  =  s;
+		buf[9]  = -s;
+		buf[10] =  c;
+
+		return buf;
 	}
-	static rotate(src, x, y, z) {
-		return src;
+	static rotationY_matrix(rad) {
+		const buf = Matrix.identity(Matrix.matBufXform);
+
+		const c = Math.cos(rad);
+		const s = Math.sin(rad);
+		buf[0]  =  c;
+		buf[2]  = -s;
+		buf[8]  =  s;
+		buf[10] =  c;
+
+		return buf;
 	}
-	static rotateV(src, xyz) {
-		return src;
+	static rotationZ_matrix(rad) {
+		const buf = Matrix.identity(Matrix.matBufXform);
+		
+		const c = Math.cos(rad);
+		const s = Math.sin(rad);
+		buf[0]  =  c;
+		buf[1]  =  s;
+		buf[4]  = -s;
+		buf[5]  =  c;
+
+		return buf;
 	}
-	static rotateX(src, x) {
-		return Matrix.rotate(src, x, 0, 0);
+	static rotateX(src, rad) {
+		return Matrix.multiply(
+			src, 
+			Matrix.rotationX_matrix(rad), 
+			src
+		);
 	}
-	static rotateY(src, y) {
-		return Matrix.rotate(src, 0, y, 0);
+	static rotateY(src, rad) {
+		return Matrix.multiply(
+			src, 
+			Matrix.rotationY_matrix(rad), 
+			src
+		);
 	}
-	static rotateZ(src, z) {
-		return Matrix.rotate(src, 0, 0, z);
+	static rotateZ(src, rad) {
+		return Matrix.multiply(
+			src, 
+			Matrix.rotationZ_matrix(rad), 
+			src
+		);
 	}
 
 	static translation_matrix(x, y, z) {
@@ -356,6 +400,14 @@ class Matrix {
 		return Matrix.scale(src, 0, 0, z);
 	}
 
+	static perspective(src, fov, aspect, zNear, zFar) {
+		return Matrix.identity(src); // TODO
+	}
+
+	static orthographic(src, left, right, bottom, top, zNear, zFar) {
+		return Matrix.identity(src); // TODO
+	}
+
 
 
 
@@ -408,11 +460,14 @@ for (int row=0;row<4;row++) {
 				vBuf1[2] = B[colIdx + 2];
 				vBuf1[3] = B[colIdx + 3];
 
-				matBuf[colIdx + r] = dot(vBuf0, vBuf1);
+				// row r, col c = dot(r, c)
+				Matrix.matBuf[colIdx + r] = dot(vBuf0, vBuf1);
 			}
 		}
 
-		dst.set(matBuf);
+		dst.set(Matrix.matBuf);
+
+		return dst;
 	}
 	static multiplyV(m0, v, dst) {
 		dst = dst || v;

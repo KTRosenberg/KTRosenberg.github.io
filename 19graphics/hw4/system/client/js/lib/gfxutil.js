@@ -30,6 +30,7 @@ window.GFX = (function() {
 
     function addShader(program, type, src, errRecord) {
         const shader = gl.createShader(type);
+        
         gl.shaderSource(shader, src);
         gl.compileShader(shader);
         if (! gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
