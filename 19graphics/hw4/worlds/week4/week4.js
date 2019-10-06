@@ -37,6 +37,7 @@ const cos = Math.cos;
 const sin = Math.sin;
 
 function vec3_normalize(arr, out) {
+    out = out || new Float32Array([0.0, 0.0, 0.0]);
     const x = arr[0];
     const y = arr[1];
     const z = arr[2];
@@ -57,6 +58,39 @@ function vec3_dot(v0, v1) {
            (v0[1] * v1[1]) +
            (v0[2] * v1[2]);
 }
+
+function vec3_scale(v, s, out) {
+    out = out || new Float32Array([0, 0, 0]);
+    out[0] = v[0] * s;
+    out[1] = v[1] * s;
+    out[2] = v[2] * s;
+
+    return out;
+}
+
+function vec3_project(v0, v1, out) {
+    out = out || new Float32Array([0, 0, 0]);
+    return vec3_scale(v1, vec3_dot(v0, v1) / vec3_dot(v0, v0), out);
+}
+
+function vec3_add(v0, v1, out) {
+    out = out || new Float32Array([0, 0, 0]);
+    out[0] = v0[0] + v1[0];
+    out[1] = v0[1] + v1[0];
+    out[2] = v0[2] + v1[0];
+
+    return out;
+}
+
+function vec3_subtract(v0, v1, out) {
+    out = out || new Float32Array([0, 0, 0]);
+    out[0] = v0[0] - v1[0];
+    out[1] = v0[1] - v1[0];
+    out[2] = v0[2] - v1[0];
+
+    return out;
+}
+
 
 function sin01(val) {
     return (1.0 + sin(val)) / 2.0;
@@ -216,8 +250,8 @@ class Transform {
 
 let spheres = [
     new Sphere(
-        [0.0, 1.5, 0.0],
-        0.5,
+        [0.0, 1.5, -1.0],
+        0.3,
         new Material(
             [0.0, 0.1, 0.1],
             [1.0, 0.3, 0.3],
@@ -228,7 +262,7 @@ let spheres = [
         )
     ),
     new Sphere(
-        [0.5, -0.5, -4.0],
+        [0.5, -0.5, 0.0],
         0.3,
         new Material(
             [0.0, 0.1, 0.1],
@@ -241,10 +275,10 @@ let spheres = [
         )
     ),
     new Sphere(
-        [0.0, -0.5, -4.0],
-        0.5,
+        [0.0, -0.5, 0.0],
+        0.3,
         new Material(
-            [0.0, 0.1, 0.1],
+            [0.0, 0.1, 0.],
             [0.1, 0.1, 0.1],
             [1.0, 1.0, 1.0],
             100.0,
@@ -259,28 +293,6 @@ let r = 0.2;
 let r3 = 1.0 / Math.sqrt(r);
 
 let polyhedra = [
-    new Polyhedron(
-        [0.0, 0.0, 0.0],
-        r,
-        6,
-        new Material(
-            [1.0, 1.0, 1.0],
-            [1.0, 1.0, 1.0],
-            [0.02, 0.0124, 1.0],
-            0.02,
-            [1.0, 1.0, 1.0, 1.0],
-            [0.5, 0.5, 0.5, IDX_REFRACT_FUSED_QUARTZ]
-        ),
-        new Float32Array([
-           -1.0,  0.0,  0.0, -r,
-            1.0,  0.0,  0.0, -r,
-            0.0, -1.0,  0.0, -r,
-            0.0,  1.0,  0.0, -r,
-            0.0,  0.0, -1.0, -r,
-            0.0,  0.0,  1.0, -r,
-        ])
-    ),
-
     new Polyhedron(
         [0.0, 0.0, -10.0],
         0.5,
@@ -302,6 +314,27 @@ let polyhedra = [
              r3, -r3,  r3, -r,
             -r3,  r3,  r3, -r,
              r3,  r3,  r3, -r,
+        ])
+    ),
+    new Polyhedron(
+        [0.0, 0.0, 0.0],
+        r,
+        6,
+        new Material(
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [0.02, 0.0124, 1.0],
+            0.02,
+            [1.0, 1.0, 1.0, 1.0],
+            [0.5, 0.5, 0.5, IDX_REFRACT_FUSED_QUARTZ]
+        ),
+        new Float32Array([
+           -1.0,  0.0,  0.0, -r,
+            1.0,  0.0,  0.0, -r,
+            0.0, -1.0,  0.0, -r,
+            0.0,  1.0,  0.0, -r,
+            0.0,  0.0, -1.0, -r,
+            0.0,  0.0,  1.0, -r,
         ])
     ),
 ]
@@ -336,8 +369,15 @@ async function setup(state) {
     if (!libSources) {
         throw new Error("Could not load shader library");
     }
-
-    state.velBouncy = new Float32Array([1.0 + Math.max(0.001, Math.random()), 1.0 + Math.max(0.0001), 0.0 * -Math.max(0.0001)]);
+    for (let i = 0; i < spheres.length; i += 1) {
+        spheres[i].velocity = new Float32Array([
+            1 + Math.random(), 
+            1 + Math.random(), 
+            0.0]);
+    }
+    for (let i = 1; i < polyhedra.length; i += 1) {
+        polyhedra[i].velocity = new Float32Array([1.0 + Math.max(0.001, Math.random()), 1.0 + Math.max(0.0001), 0.0 * -Math.max(0.0001)]); 
+    }
     // load vertex and fragment shaders from the server, register with the editor
     let shaderSource = await MREditor.loadAndRegisterShaderForLiveEditing(
         gl,
@@ -391,6 +431,22 @@ async function setup(state) {
                 gl.uniform1i(gl.getUniformLocation(program,  "sphere_count"),     3);
                 gl.uniform1i(gl.getUniformLocation(program,  "polyhedron_count"), 2);
                 gl.uniform1i(gl.getUniformLocation(program,  "plane_count"),      0);
+
+                gl.uniformMatrix4fv(gl.getUniformLocation(program, "quad_surf_sphere"),
+                    false,
+                    [1.,0.,0.,0., 
+                    0.,1.,0.,0., 
+                    0.,0.,1.,0., 
+                    0.,0.,0.,-1.]
+                );
+
+                gl.uniformMatrix4fv(gl.getUniformLocation(program, "quad_surf_tube"),
+                    false,
+                    [1.,0.,0.,0., 
+                    0.,1.,0.,0., 
+                    0.,0.,0.,0., 
+                    0.,0.,0.,-1.]
+                );
 
                 for (let i = 0; i < spheres.length; i += 1) {
                     const sphere = spheres[i];
@@ -508,51 +564,147 @@ function onStartFrame(t, state) {
     const sinTime = sin(time);
     const cosTime = cos(time);
     const sin01Time = sin01(time);
-    {
-        {
-            const spCenter = spheres[0].center;
-            spCenter[0] = 0.0 - sinTime;
-            spCenter[1] = 1.5;
-            spCenter[2] = 5.0 * sinTime;
-        }
-        {
-            const spCenter = spheres[1].center;
-            spCenter[0] =  0.5;
-            spCenter[1] = -0.5;
-            spCenter[2] = -4.0 - smv;
-        }
-        {
-            const spCenter = spheres[2].center;
-            spCenter[0] =  0.0 + cosTime;
-            spCenter[1] = -0.5 + 0.0;
-            spCenter[2] = -4.0 + sinTime;
-        }
-        spheres[0].upload.center();
-        spheres[1].upload.center();
-        spheres[2].upload.center();
 
-        for (let i = 0; i < 3; i += 1) {
-            const sphere = spheres[i];
+    const cursorVal = cursorValue();
+
+    for (let p = 0; p < spheres.length; p += 1){
+        const ph = spheres[p];
+        //ph.center[0] = 0.0;
+        //ph.center[1] = -1;
+        //ph.upload.center();
+
+        {
+        H.save();
+            const xform = ph.xform;
+        
+            //Matrix.rotateZ(H.matrix(), time);
+            //Matrix.translateY(H.matrix(), -0.5);
+            //Matrix.rotateX(H.matrix(), time);
+
+            
+            const atn = Math.atan2(cursorVal[1], cursorVal[0]);
+            Matrix.translate(H.matrix(), ph.center[0], ph.center[1], -1.0 + ph.center[2]);
+            Matrix.rotateY(H.matrix(), cursorVal[0] * Math.PI);
+            Matrix.rotateX(H.matrix(), -cursorVal[1] * Math.PI);
+            Matrix.scale(H.matrix(), ph.r, ph.r, ph.r);
+            
+            let cx = ph.center[0];
+            let cy = ph.center[1];
+            let cz = ph.center[2];
+
+            let N = null;
+
+            // collide against walls 
+            {
+                cx += spheres[p].velocity[0] * dt;
+                if (cx > 1.0 && spheres[p].velocity[0] > 0.0) {
+                    //I - 2.0 * dotprod * N
+                    N = [-1.0, 0.0, 0.0];
+                    reflect(spheres[p].velocity, N);
+                } else if (cx < -1.0 && spheres[p].velocity[0] < 0.0) {
+                    //I - 2.0 * dotprod * N
+                    N = [1.0, 0.0, 0.0];
+                    reflect(spheres[p].velocity, N);
+                }
+
+                cy += spheres[p].velocity[1] * dt;
+                if (cy > 1.0 && spheres[p].velocity[1] > 0.0) {
+                    //I - 2.0 * dotprod * N
+                    N = [0.0, -1.0, 0.0];
+                    reflect(spheres[p].velocity, N);
+
+                } else if (cy < -1.0 && spheres[p].velocity[1] < 0.0) {
+                    //I - 2.0 * dotprod * N
+                    N = [0.0, 1.0, 0.0];
+                    reflect(spheres[p].velocity, N);
+                }
+
+
+                cz += spheres[p].velocity[2] * dt;
+                if (cz > 0.0 && spheres[p].velocity[2] > 0.0) {
+                    //I - 2.0 * dotprod * N
+                    N = [0.0, 0.0, -1.0];
+                    reflect(spheres[p].velocity, N);
+
+                } else if (cz < -5.0 && spheres[p].velocity[2] < 0.0) {
+                    //I - 2.0 * dotprod * N
+                    N = [0.0, 0.0, 1.0];
+                    reflect(spheres[p].velocity, N);
+                }
+            }
+
+            ph.center[0] = cx;
+            ph.center[1] = cy;
+            ph.center[2] = cz;
+
+            xform.model = H.matrix();
             H.save();
-                Matrix.translateV(H.matrix(), sphere.center);
-                Matrix.scale(H.matrix(), sphere.r * 2, sphere.r * 2, sphere.r * 2);
-                sphere.xform.model = H.matrix();
-                H.save();
-                    Matrix.inverse(H.matrix());
-                    sphere.xform.inverse = H.matrix();
-                    sphere.xform.upload.all();
-
-                H.restore();
+                Matrix.inverse(H.matrix());
+                xform.inverse = H.matrix();
+                xform.upload.all();
             H.restore();
+        H.restore();
         }
     }
     {
-        const cursorVal = cursorValue();
-        {
-            const ph = polyhedra[0];
+        function intersectSphere(sphere, other) {
+            const c0 = sphere.center;
+            const c1 = other.center;
+
+            const rsum = (sphere.r + other.r)
+            const r2 = rsum * rsum;
+
+            const dist2 = (c0[0] - c1[0]) * (c0[0] - c1[0]) +
+                          (c0[1] - c1[1]) * (c0[1] - c1[1]) +
+                          (c0[2] - c1[2]) * (c0[2] - c1[2]);
+
+            return dist2 < r2;
+        }
+
+    
+        // for (let i = 0; i < spheres.length; i += 1) {
+        //     for (let j = i + 1; j < spheres.length; j += 1) {
+        //         if (!intersectSphere(spheres[i], spheres[j])) {
+        //             continue;
+        //         }
+
+        //         let v0 = new Float32Array(spheres[i].velocity);
+        //         let v1 = new Float32Array(spheres[j].velocity);
+
+        //         let coll = new Float32Array([0, 0, 0]);
+        //         vec3_subtract(spheres[i].center, spheres[j].center, coll);
+
+        //         const ainit = vec3_dot(v0, coll);
+        //         const binit = vec3_dot(v1, coll);
+
+        //         let afinal = binit;
+        //         let bfinal = ainit;
+
+        //         const inc = new Float32Array([0, 0, 0]);
+
+        //         vec3_scale(coll, (afinal - ainit), inc);
+        //         vec3_add(spheres[i].velocity, inc, spheres[i].velocity);
+        //         vec3_add(spheres[i].center, 
+        //             vec3_scale(vec3_normalize(spheres[i].velocity), 0.0001), 
+        //             spheres[i].center);
+
+        //         vec3_scale(coll, (bfinal - binit), inc);
+        //         vec3_add(spheres[j].velocity, inc, spheres[j].velocity);
+        //         vec3_add(spheres[j].center, 
+        //             vec3_scale(vec3_normalize(spheres[j].velocity), 0.0001), 
+        //             spheres[j].center);
+        //     }
+        // }
+    }
+    {
+
+
+
+        for (let p = 1; p < polyhedra.length; p += 1){
+            const ph = polyhedra[p];
             //ph.center[0] = 0.0;
             //ph.center[1] = -1;
-            ph.upload.center();
+            //ph.upload.center();
 
             {
             H.save();
@@ -575,47 +727,45 @@ function onStartFrame(t, state) {
 
                 let N = null;
 
-                cx += state.velBouncy[0] * dt;
-                if (cx > 1.0 && state.velBouncy[0] > 0.0) {
+                cx += polyhedra[p].velocity[0] * dt * 0.001;
+                if (cx > 1.0 && polyhedra[p].velocity[0] > 0.0) {
                     //I - 2.0 * dotprod * N
                     N = [-1.0, 0.0, 0.0];
-                    reflect(state.velBouncy, N);
-                } else if (cx < -1.0 && state.velBouncy[0] < 0.0) {
+                    reflect(polyhedra[p].velocity, N);
+                } else if (cx < -1.0 && polyhedra[p].velocity[0] < 0.0) {
                     //I - 2.0 * dotprod * N
                     N = [1.0, 0.0, 0.0];
-                    reflect(state.velBouncy, N);
+                    reflect(polyhedra[p].velocity, N);
                 }
 
-                cy += state.velBouncy[1] * dt;
-                if (cy > 1.0 && state.velBouncy[1] > 0.0) {
+                cy += polyhedra[p].velocity[1] * dt * 0.001;
+                if (cy > 1.0 && polyhedra[p].velocity[1] > 0.0) {
                     //I - 2.0 * dotprod * N
                     N = [0.0, -1.0, 0.0];
-                    reflect(state.velBouncy, N);
+                    reflect(polyhedra[p].velocity, N);
 
-                } else if (cy < -1.0 && state.velBouncy[1] < 0.0) {
+                } else if (cy < -1.0 && polyhedra[p].velocity[1] < 0.0) {
                     //I - 2.0 * dotprod * N
                     N = [0.0, 1.0, 0.0];
-                    reflect(state.velBouncy, N);
+                    reflect(polyhedra[p].velocity, N);
                 }
 
 
-                cz += state.velBouncy[2] * dt;
-                if (cz > 0.0 && state.velBouncy[2] > 0.0) {
+                cz += polyhedra[p].velocity[2] * dt * 0.001;
+                if (cz > 0.0 && polyhedra[p].velocity[2] > 0.0) {
                     //I - 2.0 * dotprod * N
                     N = [0.0, 0.0, -1.0];
-                    reflect(state.velBouncy, N);
+                    reflect(polyhedra[p].velocity, N);
 
-                } else if (cz < -5.0 && state.velBouncy[2] < 0.0) {
+                } else if (cz < -5.0 && polyhedra[p].velocity[2] < 0.0) {
                     //I - 2.0 * dotprod * N
                     N = [0.0, 0.0, 1.0];
-                    reflect(state.velBouncy, N);
+                    reflect(polyhedra[p].velocity, N);
                 }
 
                 ph.center[0] = cx;
                 ph.center[1] = cy;
                 ph.center[2] = cz;
-
-                //Matrix.scale(H.matrix(), .2, 2 * 1. , 2 * 1.);
 
                 xform.model = H.matrix();
                 H.save();
@@ -627,7 +777,7 @@ function onStartFrame(t, state) {
             }
         }
         {
-            const ph = polyhedra[1];
+            const ph = polyhedra[0];
 
             ph.upload.center();
 
@@ -684,9 +834,6 @@ function onStartFrame(t, state) {
             {
             H.save();
                 const xform = ph.xform;
-            
-                //Matrix.rotateZ(H.matrix(), time);
-                //Matrix.translateY(H.matrix(), -0.5);
                 
                 let dx = ph.center[0] - cursorVal[0];
                 let dy = ph.center[1] - cursorVal[1];
@@ -696,13 +843,13 @@ function onStartFrame(t, state) {
 
                 const dist2 = Math.sqrt((dx * dx) + (dy * dy));
 
-
-
+                const timeX2 = time * 2;
+                const finalScale = (dist2 + sin01Time) * 2.0;
                 Matrix.translate(H.matrix(), ph.center[0], ph.center[1], 0.0);
-                Matrix.rotateZ(H.matrix(), time * 2);
-                Matrix.rotateX(H.matrix(), time * 2);
-                Matrix.rotateY(H.matrix(), time * 2);
-                Matrix.scale(H.matrix(), (dist2 + sin01Time) * 2.0, (dist2 + sin01Time) * 2.0, (dist2 + sin01Time) * 2.0);
+                Matrix.rotateZ(H.matrix(), timeX2);
+                Matrix.rotateX(H.matrix(), timeX2);
+                Matrix.rotateY(H.matrix(), timeX2);
+                Matrix.scaleXYZ(H.matrix(), finalScale);
 
                 xform.model = H.matrix();
                 H.save();

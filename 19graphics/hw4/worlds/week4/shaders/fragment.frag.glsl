@@ -12,6 +12,10 @@ out vec4 fragColor;
 
 // mini utility library
 
+uniform mat4 quad_surf_sphere;
+uniform mat4 quad_surf_tube;
+
+
 float sin01(float v) {
     return (1.0 + sin(v)) / 2.0;
 }
@@ -274,55 +278,12 @@ void init(void)
 
 
     float smv = 0.5 * sin(2.0 * uTime);
-    /*
-    spheres[0] = Sphere(
-        vec3(0.0 - sin(uTime), 1.5, 5.0 * sin(uTime)),
-        0.5 ,//+ abs(noise(vec3(vPos.xy * sin(uTime), 0.0))), // NOTE: this doesn't affect the reflections -- would need to do transformation based on raytraced point
-        Material(
-           vec3(0.,.1,.1),
-           vec3(1.0, 0.3, 0.3),
-           vec3(1.0, 0.3, 0.3),
-           2.0,
-
-            vec4(1.0, 1.0, 1.0, 1.0),
-            NO_REFRACT
-        )
-    );
-
-    spheres[1] = Sphere(
-        vec3(.5,-0.5,-4.-smv),
-        0.3,
-        Material(
-           vec3(0.,.1,.1),
-           vec3(.3,.3,1.0),
-           vec3(.3,.3,1),
-           6.0,
-
-            vec4(1.0, 1.0, 1.0, 1.0),
-            vec4(vec3(0.5), IDX_REFRACT_WATER)
-        )
-    );
-
-    spheres[2] = Sphere(
-        vec3(0.,-.5, -4.0) + vec3(cos(uTime), 0.0, sin(uTime)),
-        0.5,
-        Material(
-            vec3(0.,.1,.1),
-            vec3(0.1),
-            vec3(1.0),
-            100.0,
-
-            vec4(1.0, 1.0, 1.0, 1.0),
-            vec4(vec3(0.5), IDX_REFRACT_FUSED_QUARTZ)
-        )
-    );
-    */
 
 // instantiate planes
-   // make the plane react to the position
-   // of the yellow sphere
+    // make the plane react to the position
+    // of the yellow sphere
    
-   planes[0] = Plane(
+    planes[0] = Plane(
         vec3(0.0,-1.0 - sin(0.2 * uTime + noise(vPos)), 0.0),
         vec3(0.0, 1.0, sin01(uTime / -2.0) * .25),
         Material(
@@ -336,61 +297,10 @@ void init(void)
             0, 0, 0
        )
     );
-
-   /*
-
-    Polyhedron_init(polyhedra[0],
-        vec3(0.0, sin01(uTime), -10),
-        0.5,
-        6,
-        Material(
-            vec3(1.0),
-            vec3(1.0),
-            vec3(0.02, 0.0124, 06234),
-            6.0,
-            vec4(1.0, 1.0, 1.0, 1.0),
-            vec4(vec3(0.5), IDX_REFRACT_FUSED_QUARTZ)
-        )
-    );
-
-    polyhedra[0].planes[0] = vec4(-1.0,  0.0,  0.0, -polyhedra[0].r);
-    polyhedra[0].planes[1] = vec4( 1.0,  0.0,  0.0, -polyhedra[0].r);
-    polyhedra[0].planes[2] = vec4( 0.0, -1.0,  0.0, -polyhedra[0].r);
-    polyhedra[0].planes[3] = vec4( 0.0,  1.0,  0.0, -polyhedra[0].r);
-    polyhedra[0].planes[4] = vec4( 0.0,  0.0, -1.0, -polyhedra[0].r);
-    polyhedra[0].planes[5] = vec4( 0.0,  0.0,  1.0, -polyhedra[0].r - (10.0 * sin01(uTime)));
-
-    Polyhedron_init(polyhedra[1],
-        vec3(cos(uTime), sin01(uTime), 0.0),
-        sin01(-uTime),
-        8,
-        Material(
-            vec3(0.01, 0.2, 0.01),
-            vec3(0.67, 0.0, 0.02),
-            vec3(0.01, 0.2, 0.6),
-            10.0,
-            vec4(1.0, 1.0, 1.0, 1.0),
-            vec4(vec3(0.5), IDX_REFRACT_DIAMOND)
-        )
-    );
-
-    {
-        float r = polyhedra[1].r;
-        float r3 = 1.0 / sqrt(r);
-        polyhedra[1].planes[0] = vec4(-r3, -r3, -r3, -r);
-        polyhedra[1].planes[1] = vec4( r3, -r3, -r3, -r);
-        polyhedra[1].planes[2] = vec4(-r3,  r3, -r3, -r);
-        polyhedra[1].planes[3] = vec4( r3,  r3, -r3, -r);
-        polyhedra[1].planes[4] = vec4(-r3, -r3,  r3, -r);
-        polyhedra[1].planes[5] = vec4( r3, -r3,  r3, -r);
-        polyhedra[1].planes[6] = vec4(-r3,  r3,  r3, -r);
-        polyhedra[1].planes[7] = vec4( r3,  r3,  r3, -r);
-    }
-
-    */
-
 }
 
+#define OLD_RT_SPHERE (0)
+#if (OLD_RT_SPHERE)
 #define raytrace_sphere(t, t2, ray_, S) do { \
     vec3 origin = ray_.V - S.center; \
     float dir_dot_origin = dot(ray_.W, origin); \
@@ -401,6 +311,7 @@ void init(void)
     \
     if (discrim == 0.0) { \
         t = -dir_dot_origin; \
+        t2 = t; \
     } else if (discrim >= RT_EPSILON) { \
         float sqroot = sqrt(discrim); \
         \
@@ -416,7 +327,85 @@ void init(void)
     } \
 } while (false)
 
+#else
 
+#define raytrace_sphere(t, t2, ray_, S) do { \
+    mat4 surf = transpose(S.xform.inverse) * quad_surf_sphere * S.xform.inverse; \
+    surf = mat4(surf[0].x, surf[0].y+surf[1].x, surf[0].z+surf[2].x, surf[0].w+surf[3].x, \
+                0.       , surf[1].y          , surf[1].z+surf[2].y, surf[1].w+surf[3].y, \
+                0.       , 0.                 , surf[2].z          , surf[2].w+surf[3].z, \
+                0.       , 0.                 , 0.,                  surf[3].w \
+    ); \
+    \
+    float vx = ray_.V.x; \
+    float vy = ray_.V.y; \
+    float vz = ray_.V.z; \
+    float wx = ray_.W.x; \
+    float wy = ray_.W.y; \
+    float wz = ray_.W.z; \
+    \
+    a_ = surf[0][0]; \
+    b_ = surf[0][1]; \
+    c_ = surf[0][2]; \
+    d_ = surf[0][3]; \
+    e_ = surf[1][1]; \
+    f_ = surf[1][2]; \
+    g_ = surf[1][3]; \
+    h_ = surf[2][2]; \
+    i_ = surf[2][3]; \
+    j_ = surf[3][3]; \
+    \
+    float A_ = a_*wx*wx + b_*wx*wy + c_*wx*wz + \
+                          e_*wy*wy + f_*wy*wz + \
+                                     h_*wz*wz; \
+    \
+    float B_ = a_*(vx*wx + vx*wx) + b_*(vx*wy + vy*wx) + c_*(vx*wz + vz*wx) + d_*wx + \
+                                    e_*(vy*wy + vy*wy) + f_*(vy*wz + vz*wy) + g_*wy + \
+                                                         h_*(vz*wz + vz*wz) + i_*wz; \
+    \
+    float C_ = a_*vx*vx + b_*vx*vy + c_*vx*vz + d_*vx + \
+                          e_*vy*vy + f_*vy*vz + g_*vy + \
+                                     h_*vz*vz + i_*vz + \
+                                                j_; \
+    \
+    float discrim = B_*B_ - 4.0*A_*C_; \
+    if (A_ == 0.0) { \
+    } else if (discrim == 0.0) { \
+        t = -B_ / (2.0 * A_); \
+        t2 = t; \
+    } else if (discrim >= RT_EPSILON) { \
+        float sqroot = sqrt(discrim); \
+        \
+        float t1_ = (-B_ + sqroot) / (2.0 * A_); \
+        float t2_ = (-B_ - sqroot) / (2.0 * A_); \
+        if (t1_ < t2_) { \
+            t  = t1_; \
+            t2 = t2_; \
+        } else { \
+            t  = t2_; \
+            t2 = t1_; \
+        } \
+    } \
+} while (false)
+#endif
+
+
+#if (!OLD_RT_SPHERE)
+    float a_ = 0.0; float b_ = 0.0; float c_ = 0.0; float d_ = 0.0;
+    float e_ = 0.0; float f_ = 0.0; float g_ = 0.0; float h_ = 0.0;
+    float i_ = 0.0; float j_ = 0.0;
+
+    float abest = 0.0; 
+    float bbest = 0.0;
+    float cbest = 0.0;
+    float dbest = 0.0;
+    float ebest = 0.0;
+    float fbest = 0.0;
+    float gbest = 0.0;
+    float hbest = 0.0;
+    float ibest = 0.0;
+    float jbest = 0.0;
+#endif
 
 bool raytrace_spheres(RT_SPHERE_PARAM_LIST) 
 {
@@ -425,6 +414,23 @@ bool raytrace_spheres(RT_SPHERE_PARAM_LIST)
     int   i_sphere = -1;
     res.type = RT_TYPE_MISS;
     vec3 center = vec3(0.0);
+
+#if (!OLD_RT_SPHERE)
+    a_ = 0.0; b_ = 0.0; c_ = 0.0; d_ = 0.0;
+    e_ = 0.0; f_ = 0.0; g_ = 0.0; h_ = 0.0;
+    i_ = 0.0; j_ = 0.0;
+
+    abest = 0.0; 
+    bbest = 0.0;
+    cbest = 0.0;
+    dbest = 0.0;
+    ebest = 0.0;
+    fbest = 0.0;
+    gbest = 0.0;
+    hbest = 0.0;
+    ibest = 0.0;
+    jbest = 0.0;
+#endif
 
     for (int i = 0; i < MAX_SPHERE_COUNT; i += 1) {
         if (i == sphere_count) {
@@ -443,12 +449,36 @@ bool raytrace_spheres(RT_SPHERE_PARAM_LIST)
             res.t  = t;
             res.t2 = t2;
             center = spheres[i].center;
+
+            #if (!OLD_RT_SPHERE)
+                abest = a_;
+                bbest = b_;
+                cbest = c_;
+                dbest = d_;
+                ebest = e_;
+                fbest = f_;
+                gbest = g_;
+                hbest = h_;
+                ibest = i_;
+                jbest = j_;
+            #endif
         }
     }
 
     if (res.type != RT_TYPE_MISS) {
         res.point  = (ray.V + (min_dist * ray.W));
+#if (OLD_RT_SPHERE)
         res.normal = normalize(res.point - center);
+#else 
+        float x_ = res.point.x;
+        float y_ = res.point.y;
+        float z_ = res.point.z;
+        res.normal = normalize(vec3(
+            2.0*abest*x_ + bbest*y_     + cbest*z_     + dbest,
+                           2.0*ebest*y_ + fbest*z_     + gbest,
+                                          2.0*hbest*z_ + ibest
+        ));
+#endif
         return true;
     }
     return false;
@@ -500,7 +530,8 @@ do { \
         } else { /* entire ray contained within */ \
           case_ = RT_HS_CASE_INSIDE_CONTAINED;  \
         } \
-    } \
+    } else { \
+    case_ = RT_HS_CASE_OUTSIDE_MISSED; }\
 } while (false)
 
 

@@ -458,6 +458,9 @@ class Matrix {
 	static scaleZ(src, z) {
 		return Matrix.scale(src, 0, 0, z);
 	}
+	static scaleXYZ(src, val) {
+		return Matrix.scale(src, val, val, val);
+	}
 
 	static perspective(src, fov, aspect, zNear, zFar) {
 		return Matrix.identity(src); // TODO
