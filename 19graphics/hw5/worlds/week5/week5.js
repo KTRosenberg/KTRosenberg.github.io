@@ -49,6 +49,7 @@ async function onReload(state) {
     return MR.dynamicImport(getPath("matrix.js")).then((myModule) => {
         matrixModule = myModule;
         Mat = matrixModule.Matrix;
+        H = state.H;
     });
 }
 
@@ -91,6 +92,64 @@ let createCubeVertices = () => {
 
 let cubeVertices = createCubeVertices();
 
+/*
+// data for interleaved attribute cube
+const cubeVertexCount = 24;
+const cubeIndexCount  = 36;
+// front, right, back, left, top, bottom
+const cubeVertexData = new Float32Array([
+    // pos             // normals      // uv coords                                  
+    -1.0,  1.0,  1.0,  0.0, 0.0, 1.0,  0.0, 1.0, // Top Left
+    -1.0, -1.0,  1.0,  0.0, 0.0, 1.0,  0.0, 0.0, // Bottom Left 
+     1.0, -1.0,  1.0,  0.0, 0.0, 1.0,  1.0, 0.0, // Bottom Right
+     1.0,  1.0,  1.0,  0.0, 0.0, 1.0,  1.0, 1.0, // Top Right
+     
+     1.0,  1.0,  1.0,  1.0, 0.0, 0.0,  0.0, 1.0, // Top Left
+     1.0, -1.0,  1.0,  1.0, 0.0, 0.0,  0.0, 0.0, // Bottom Left 
+     1.0, -1.0, -1.0,  1.0, 0.0, 0.0,  1.0, 0.0, // Bottom Right
+     1.0,  1.0, -1.0,  1.0, 0.0, 0.0,  1.0, 1.0, // Top Right
+     
+     1.0,  1.0, -1.0,  0.0, 0.0,-1.0,  0.0, 1.0, // Top Left
+     1.0, -1.0, -1.0,  0.0, 0.0,-1.0,  0.0, 0.0, // Bottom Left 
+    -1.0, -1.0, -1.0,  0.0, 0.0,-1.0,  1.0, 0.0, // Bottom Right
+    -1.0,  1.0, -1.0,  0.0, 0.0,-1.0,  1.0, 1.0, // Top Right
+    
+    -1.0,  1.0, -1.0, -1.0, 0.0, 0.0,  0.0, 1.0, // Top Left
+    -1.0, -1.0, -1.0, -1.0, 0.0, 0.0,  0.0, 0.0, // Bottom Left 
+    -1.0, -1.0,  1.0, -1.0, 0.0, 0.0,  1.0, 0.0, // Bottom Right
+    -1.0,  1.0,  1.0, -1.0, 0.0, 0.0,  1.0, 1.0, // Top Right
+    
+    -1.0,  1.0, -1.0,  0.0, 1.0, 0.0,  0.0, 1.0, // Top Left
+    -1.0,  1.0,  1.0,  0.0, 1.0, 0.0,  0.0, 0.0, // Bottom Left 
+     1.0,  1.0,  1.0,  0.0, 1.0, 0.0,  1.0, 0.0, // Bottom Right
+     1.0,  1.0, -1.0,  0.0, 1.0, 0.0,  1.0, 1.0, // Top Right
+     
+    -1.0, -1.0,  1.0,  0.0,-1.0, 0.0,  0.0, 1.0, // Top Left
+    -1.0, -1.0, -1.0,  0.0,-1.0, 0.0,  0.0, 0.0, // Bottom Left 
+     1.0, -1.0, -1.0,  0.0,-1.0, 0.0,  1.0, 0.0, // Bottom Right
+     1.0, -1.0,  1.0,  0.0,-1.0, 0.0,  1.0, 1.0  // Top Right
+]);
+const cubeIndexData = new Uint16Array([
+    0, 1, 2,
+    2, 3, 0,
+    
+    4, 5, 6,
+    6, 7, 4,
+    
+    8, 9, 10,
+    10, 11, 8,
+    
+    12, 13, 14,
+    14, 15, 12,
+    
+    16, 17, 18,
+    18, 19, 16,
+    
+    20, 21, 22,
+    22, 23, 20
+]);
+*/
+
 
 async function setup(state) {
     hotReloadFile(getPath('week5.js'));
@@ -104,10 +163,7 @@ async function setup(state) {
     let libSources = await MREditor.loadAndRegisterShaderLibrariesForLiveEditing(gl, "libs", [
         { 
             key : "pnoise", path : "shaders/noise.glsl", foldDefault : true
-        },
-        {
-            key : "sharedlib1", path : "shaders/sharedlib1.glsl", foldDefault : true
-        },      
+        }   
     ]);
 
     if (!libSources) {
@@ -172,10 +228,10 @@ async function setup(state) {
                 vertex   : "shaders/vertex.vert.glsl",
                 fragment : "shaders/fragment.frag.glsl"
             },
-            foldDefault : {
-                vertex   : true,
-                fragment : false
-            }
+            // foldDefault : {
+            //     vertex   : true,
+            //     fragment : false
+            // }
         }
     );
 
@@ -303,11 +359,10 @@ function onStartFrame(t, state) {
 
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
-    let m = state.m;
+    let m = state.H;
 
     gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
     gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
-
 
  //////////////////////////////////////////////////////////////////////
 //                                                                    //
@@ -317,30 +372,30 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
  //////////////////////////////////////////////////////////////////////
 
     m.save();
-    m.identity();
-    m.translate(0,0,-6);
+    Mat.identity(m.matrix());
+    Mat.translate(m.matrix(), 0,0,-6);
 
     for (let side = -1 ; side <= 1 ; side += 2) {
-       let theta = Math.sin(3 * state.time) * side;
+       let theta = sin(3 * state.time) * side;
        m.save();
-          m.translate(side * .3,0,0);
-          m.rotateZ(theta);               // SHOULDER
-          m.rotateY(-side + .5 * theta);
-          m.translate(side * .3,0,0);
+          Mat.translate(m.matrix(), side * .3,0,0);
+          Mat.rotateZ(m.matrix(), theta);               // SHOULDER
+          Mat.rotateY(m.matrix(), -side + .5 * theta);
+          Mat.translate(m.matrix(), side * .3,0,0);
           m.save();
-             m.scale(.3,.05,.05);
+             Mat.scale(m.matrix(), .3,.05,.05);
              gl.uniform3fv(state.uColorLoc, state.color0 );
-             gl.uniformMatrix4fv(state.uModelLoc, false, m.value() );
+             gl.uniformMatrix4fv(state.uModelLoc, false, m.matrix() );
              gl.drawArrays(gl.TRIANGLES, 0, cubeVertices.length / VERTEX_SIZE);
           m.restore();
 
-          m.translate(side * .3,0,0);
-          m.rotateZ(theta);              // ELBOW
-          m.translate(side * .3,0,0);
+          Mat.translate(m.matrix(), side * .3,0,0);
+          Mat.rotateZ(m.matrix(), theta);              // ELBOW
+          Mat.translate(m.matrix(), side * .3,0,0);
           m.save();
-             m.scale(.3,.05,.05);
+             Mat.scale(m.matrix(), .3,.05,.05);
              gl.uniform3fv(state.uColorLoc, state.color0 );
-             gl.uniformMatrix4fv(state.uModelLoc, false, m.value() );
+             gl.uniformMatrix4fv(state.uModelLoc, false, m.matrix() );
              gl.drawArrays(gl.TRIANGLES, 0, cubeVertices.length / VERTEX_SIZE);
           m.restore();
        m.restore();

@@ -13,6 +13,8 @@ out vec3 vCursor;
 
 out vec2 vXY;
 
+out vec3 vWorldPos;
+
 // matrices
 uniform mat4 uModel;
 uniform mat4 uView;
@@ -27,4 +29,6 @@ void main(void) {
     vXY = pos.xy / pos.z;
     vPos = aPos;
     vNor = (vec4(aNor, 0.) * inverse(uModel)).xyz;
+
+    vWorldPos = pos.xyz;
 }

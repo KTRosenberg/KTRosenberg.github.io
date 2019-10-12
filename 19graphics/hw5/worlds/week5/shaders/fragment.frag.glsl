@@ -9,6 +9,8 @@ in vec2 vXY;           // POSITION ON IMAGE
 in vec3 vPos;          // POSITION
 in vec3 vNor;          // NORMAL
 
+in vec3 vWorldPos;
+
 out vec4 fragColor;    // RESULT WILL GO HERE
 
 void main() {
