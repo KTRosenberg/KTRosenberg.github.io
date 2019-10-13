@@ -16,7 +16,7 @@ out vec3 vNor;
 // interpolated cursor
 out vec3 vCursor;
 out vec2 vXY;
-out vec3 vWorldPos;
+out vec3 vViewPos;
 out vec2 vUV;
 
 // matrices
@@ -29,10 +29,22 @@ uniform float uTime;
 
 uniform float uDistort;
 
+float distortion(const vec3 epsilon) 
+{
+    return sin(uTime) * noise(epsilon + vec3(uTime) * sin(uTime) * float(gl_VertexID));
+}
 
+#define DISTORT_EPSILON (0.001)
 
 void main(void) {
-    vec4 mvpos = uView * uModel * vec4(aPos + uDistort * sin(uTime) * noise(vec3(uTime) * sin(uTime) * float(gl_VertexID)), 1.);
+    float distort_val = uDistort * distortion(vec3(0.0));
+    vec3 distort_delta  = uDistort * (vec3(
+        distortion(vec3(DISTORT_EPSILON, 0.0, 0.0)),
+        distortion(vec3(0.0, DISTORT_EPSILON, 0.0)),
+        distortion(vec3(0.0, 0.0, DISTORT_EPSILON))
+    ) - vec3(distort_val));
+    
+    vec4 mvpos = uView * uModel * vec4(aPos + distort_val, 1.);
     vec4 pos = uProj * mvpos;
     gl_Position = pos;
     
@@ -40,10 +52,9 @@ void main(void) {
 
     vPos = aPos;
 
-    //=vNor = (transpose(inverse(uModel)) * (vec4(aNor, 0.))).xyz;
-    vNor = (transpose(inverse(uModel)) * vec4(aNor, 0.)).xyz;
+    vNor = (transpose(inverse(uView * uModel)) * vec4(aNor + distort_delta, 0.)).xyz;
 
-    vWorldPos = mvpos.xyz / mvpos.w;
+    vViewPos = mvpos.xyz;
 
     vUV = aUV;
 }

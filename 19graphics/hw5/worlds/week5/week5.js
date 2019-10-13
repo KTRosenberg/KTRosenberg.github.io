@@ -329,8 +329,8 @@ function generateCylinder(accuracy) {
         
         theta = i * ((Math.PI) / accuracy) * 2.0;
 
-        const x = r * cos(theta);
-        const y = r * sin(theta);
+        const x = cos(theta);
+        const y = sin(theta);
 
         pts.push([x, y]);
     }
@@ -342,28 +342,28 @@ function generateCylinder(accuracy) {
         const p1 = pts[i % pts.length];
 
         // add bottom triangle
-        V.push(p0[0], -h, -p0[1], 0, -1, 0, 0.0, 0.0);
-        V.push(p1[0], -h, -p1[1], 0, -1, 0, 0.0, 0.0);
+        V.push(r * p0[0], -h, -r * p0[1], 0, -1, 0, 0.0, 0.0);
+        V.push(r * p1[0], -h, -r * p1[1], 0, -1, 0, 0.0, 0.0);
         V.push(0, -h, 0, 0, -1, 0, 0, 0);
         I.push(idx, idx + 1, idx + 2);
         idx += 3;
         // add top triangle
-        V.push(p0[0], h, -p0[1], 0, 1, 0, 0.0, 0.0);
-        V.push(p1[0], h, -p1[1], 0, 1, 0, 0.0, 0.0);
+        V.push(r * p0[0], h, -r * p0[1], 0, 1, 0, 0.0, 0.0);
+        V.push(r * p1[0], h, -r * p1[1], 0, 1, 0, 0.0, 0.0);
         V.push(0, h, 0, 0, 1, 0, 0, 0);
         I.push(idx, idx + 1, idx + 2);
         idx += 3;
         // add bridge triangles
         // tl, bl, br
-        V.push(p0[0],  h, -p0[1], p0[0], 0, -p0[1], 0.0, 0.0);
-        V.push(p0[0], -h, -p0[1], p0[0], 0, -p0[1], 0.0, 0.0);
-        V.push(p1[0], -h, -p1[1], p1[0], 0, -p1[1], 0.0, 0.0);
+        V.push(r * p0[0],  h, -r * p0[1], p0[0], 0, -p0[1], 0.0, 0.0);
+        V.push(r * p0[0], -h, -r * p0[1], p0[0], 0, -p0[1], 0.0, 0.0);
+        V.push(r * p1[0], -h, -r * p1[1], p1[0], 0, -p1[1], 0.0, 0.0);
         I.push(idx, idx + 1, idx + 2);
         idx += 3;
         // br, tr, tl
-        V.push(p1[0], -h, -p1[1], p1[0], 0, -p1[1], 0.0, 0.0);
-        V.push(p1[0],  h, -p1[1], p1[0], 0, -p1[1], 0.0, 0.0);
-        V.push(p0[0],  h, -p0[1], p0[0], 0, -p0[1], 0.0, 0.0);
+        V.push(r * p1[0], -h, -r * p1[1], p1[0], 0, -p1[1], 0.0, 0.0);
+        V.push(r * p1[0],  h, -r * p1[1], p1[0], 0, -p1[1], 0.0, 0.0);
+        V.push(r * p0[0],  h, -r * p0[1], p0[0], 0, -p0[1], 0.0, 0.0);
         I.push(idx, idx + 1, idx + 2);
         idx += 3;
     }

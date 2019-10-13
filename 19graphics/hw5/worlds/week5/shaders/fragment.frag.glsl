@@ -1,9 +1,11 @@
 #version 300 es        // NEWER VERSION OF GLSL
 precision highp float; // HIGH PRECISION FLOATS
 
+
 uniform vec3  uColor;
 uniform vec3  uCursor; // CURSOR: xy=pos, z=mouse up/down
 uniform float uTime;   // TIME, IN SECONDS
+uniform mat4 uView;
 
 in vec2 vXY;           // POSITION ON IMAGE
 in vec3 vPos;          // POSITION
@@ -12,7 +14,7 @@ in vec2 vUV;
 
 vec3 eye_dir;
 
-in vec3 vWorldPos;
+in vec3 vViewPos;
 
 out vec4 fragColor;    // RESULT WILL GO HERE
 
@@ -45,7 +47,7 @@ vec3 calc_shading(inout Material mat, vec3 bg_color)
             break; 
         }
 
-        vec3 L = -normalize(u_lights[i].direction.xyz + eye_dir);
+        vec3 L = -normalize((uView * vec4(u_lights[i].direction.xyz, 1.0)).xyz + eye_dir);
                 
             float diffuse = max(0.0, dot(N, L));
             vec3 R = reflect(L, N); // reflection vector about the normal
@@ -71,7 +73,7 @@ float sin01(float val)
 }
 
 void main() {
-    eye_dir = normalize(-vWorldPos);
+    eye_dir = normalize(-vViewPos);
     Material mat = Material(
       vec3(sin01(uTime), 0.1, 0.1),
       vec3(226. / 255., 88. / 255., 34. / 255.),
