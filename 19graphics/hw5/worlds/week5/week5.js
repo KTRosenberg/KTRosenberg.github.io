@@ -640,6 +640,8 @@ async function setup(state) {
         }
     }
 
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 }
 
 
@@ -669,32 +671,30 @@ function onStartFrame(t, state) {
 
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.clearColor(0.59, 0.0, 0.79, 0.0);
     gl.enable(gl.DEPTH_TEST);
 
-                state.lights = [
-                    new Float32Array([
-                        sin(state.time),-.57,.57, 0.0, 
-                        1.0, 1.0, 1.0, 1.0
-                    ]),
-                ]
+    state.lights = [
+        new Float32Array([
+            sin(state.time),-.57,.57, 0.0, 
+            1.0, 1.0, 1.0, 1.0
+        ]),
+    ]
 
 
 
-                for (let i = 0; i < state.lights.length; i += 1) {
-                    const dirArr = state.lights[i].subarray(0, 4);
-                    const colorArr = state.lights[i].subarray(4, 8);
+    for (let i = 0; i < state.lights.length; i += 1) {
+        const dirArr = state.lights[i].subarray(0, 4);
+        const colorArr = state.lights[i].subarray(4, 8);
 
-                    vec4_normalize(dirArr, dirArr);
+        vec4_normalize(dirArr, dirArr);
 
-                    gl.uniform4fv(state.shader0Info.lights[i].directionLoc, dirArr);
-                    gl.uniform4fv(state.shader0Info.lights[i].colorLoc, colorArr)
-                }
-
-
+        gl.uniform4fv(state.shader0Info.lights[i].directionLoc, dirArr);
+        gl.uniform4fv(state.shader0Info.lights[i].colorLoc, colorArr)
+    }
 }
 
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
-    gl.clearColor(sin01(state.time), 1.0, 1.0, 0.0);
     let m = state.H;
 
     gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
@@ -769,14 +769,6 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
             m.restore(); 
 
             m.restore();
- 
-            
-
-        
-
-        
-
-     
 }
 
 function onEndFrame(t, state) {

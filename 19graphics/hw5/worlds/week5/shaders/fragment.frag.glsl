@@ -82,7 +82,7 @@ void main() {
     );
     vec3 color = calc_shading(mat, u_ambient.rgb);
 
-    fragColor = vec4(sqrt(color), 1.0);
+    fragColor = vec4(sqrt(color), 0.5 + abs(sin(uTime)));
 }
 
 
