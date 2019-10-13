@@ -462,6 +462,20 @@ class Matrix {
 		return Matrix.scale(src, val, val, val);
 	}
 
+	static skewXRelY(src, val) {
+		return Matrix.multiply(
+			src,
+			new Float32Array([
+				1,  0,  0,  0,
+				Math.tan(val), 1,  0,  0,
+				0,  0,  1,  0,
+				0,  0,  0,  1
+			]),
+			src,
+
+		)
+	}
+
 	static perspective(src, fov, aspect, zNear, zFar) {
 		return Matrix.identity(src); // TODO
 	}

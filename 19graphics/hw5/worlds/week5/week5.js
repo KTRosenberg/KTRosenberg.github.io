@@ -705,6 +705,8 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
             m.save();
             Mat.identity(m.matrix());
             Mat.translate(m.matrix(), 0,0,-2);
+
+
             Mat.rotateX(m.matrix(), Math.PI / 16);
             Mat.rotateY(m.matrix(), 0.2 * state.time + Math.PI / 8);
             Mat.scaleXYZ(m.matrix(), 0.2);
@@ -737,12 +739,16 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
                 for (let i = 0; i < 15; i += 1) {
                     m.save();
                         Mat.translate(m.matrix(), 10 * sin01(state.time + (i + 2.5)), 0, i * 0.01);
-                        
+                        if ((i % 2 == 1)) {
+                            Mat.skewXRelY(m.matrix(), 0.5);
+                        }
+
                         m.save();
                         Mat.rotateX(m.matrix(), ((i & 0 == 0) ? -1 : 1) * i * state.time * 0.8);
                         Mat.scaleY(m.matrix(), (1/i) * 16.0 * sin(.5 * state.time + i));
                         Mat.scale(m.matrix(), 0.2, 2, 0.2)
-                        
+
+
                         gl.uniform3fv(state.uColorLoc, state.color0 );
                         gl.uniformMatrix4fv(state.uModelLoc, false, m.matrix() );
                         gl.drawElements(gl.TRIANGLES, state.cylI.length, gl.UNSIGNED_SHORT, 0);
@@ -751,6 +757,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
                     m.save();
                         Mat.identity(m.matrix());
                         Mat.translate(m.matrix(), 0, 0, 1);
+
 
                         gl.uniform3fv(state.uColorLoc, state.color0 );
                         gl.uniformMatrix4fv(state.uModelLoc, false, m.matrix() );
