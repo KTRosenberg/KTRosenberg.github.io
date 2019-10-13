@@ -23,10 +23,12 @@ uniform mat4 uProj;
 // time in seconds
 uniform float uTime;
 
+uniform float uDistort;
+
 
 
 void main(void) {
-    vec4 mvpos = uView * uModel * vec4(aPos + sin(uTime) * noise(vec3(uTime) * sin(uTime) * float(gl_VertexID)), 1.);
+    vec4 mvpos = uView * uModel * vec4(aPos + uDistort * sin(uTime) * noise(vec3(uTime) * sin(uTime) * float(gl_VertexID)), 1.);
     vec4 pos = uProj * mvpos;
     gl_Position = pos;
     

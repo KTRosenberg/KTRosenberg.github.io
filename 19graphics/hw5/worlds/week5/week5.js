@@ -485,6 +485,8 @@ async function setup(state) {
                     gl.uniform4fv(state.shader0Info.lights[i].directionLoc, dirArr);
                     gl.uniform4fv(state.shader0Info.lights[i].colorLoc, colorArr)
                 }
+
+                state.uDistortLoc = gl.getUniformLocation(program, "uDistort");
             } 
         },
         {
@@ -692,7 +694,7 @@ function onStartFrame(t, state) {
 }
 
 function onDraw(t, projMat, viewMat, state, eyeIdx) {
-
+    gl.clearColor(sin01(state.time), 1.0, 1.0, 0.0);
     let m = state.H;
 
     gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
@@ -715,15 +717,17 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
                     gl.uniform3fv(state.uColorLoc, state.color0 );
                     gl.uniformMatrix4fv(state.uModelLoc, false, m.matrix() );
 
-
+                    gl.uniform1f(state.uDistortLoc, 1.0);
                     gl.drawElements(gl.TRIANGLES, cubeIndexCount, gl.UNSIGNED_SHORT, 0);
                 m.restore();
             }
             m.save();
 
+
             //Mat.translate(m.matrix(), 10.0 * sin(state.time),.5,0);
             {
                 gl.bindVertexArray(state.vaoCyl);
+                gl.uniform1f(state.uDistortLoc, 1.0);
 
                 //Mat.translate(m.matrix(), 1,0,0);
                 //Mat.rotateY(m.matrix(), state.time);

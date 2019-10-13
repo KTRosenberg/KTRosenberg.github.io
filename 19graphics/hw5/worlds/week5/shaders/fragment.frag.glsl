@@ -65,10 +65,15 @@ vec3 calc_shading(inout Material mat, vec3 bg_color)
     return color;
 }
 
+float sin01(float val) 
+{
+    return (sin(val) + 1.0) / 2.0;
+}
+
 void main() {
     eye_dir = normalize(-vWorldPos);
     Material mat = Material(
-      vec3(0.2, 0.1, 0.1),
+      vec3(sin01(uTime), 0.1, 0.1),
       vec3(226. / 255., 88. / 255., 34. / 255.),
       vec3(.5,.5,.5),
       0.7
