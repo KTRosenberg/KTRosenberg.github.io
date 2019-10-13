@@ -417,13 +417,13 @@ class Matrix {
 		);
 	}
 	static translateX(src, x) {
-		return Matrix.translate(src, x, 0, 0);
+		return Matrix.translate(src, x, 1, 1);
 	}
 	static translateY(src, y) {
-		return Matrix.translate(src, 0, y, 0);
+		return Matrix.translate(src, 1, y, 1);
 	}
 	static translateZ(src, z) {
-		return Matrix.translate(src, 0, 0, z);
+		return Matrix.translate(src, 1, 1, z);
 	}
 
 	static scale_matrix(x, y, z) {
@@ -450,13 +450,13 @@ class Matrix {
 		);
 	}
 	static scaleX(src, x) {
-		return Matrix.scale(src, x, 0, 0);
+		return Matrix.scale(src, x, 1, 1);
 	}
 	static scaleY(src, y) {
-		return Matrix.scale(src, 0, y, 0);
+		return Matrix.scale(src, 1, y, 1);
 	}
 	static scaleZ(src, z) {
-		return Matrix.scale(src, 0, 0, z);
+		return Matrix.scale(src, 1, 1, z);
 	}
 	static scaleXYZ(src, val) {
 		return Matrix.scale(src, val, val, val);

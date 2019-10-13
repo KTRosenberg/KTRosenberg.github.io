@@ -8,22 +8,74 @@ uniform float uTime;   // TIME, IN SECONDS
 in vec2 vXY;           // POSITION ON IMAGE
 in vec3 vPos;          // POSITION
 in vec3 vNor;          // NORMAL
+in vec2 vUV;
+
+vec3 eye_dir;
 
 in vec3 vWorldPos;
 
 out vec4 fragColor;    // RESULT WILL GO HERE
 
+struct Light {
+    vec4 direction;
+    vec4 color;
+};
+
+#define MAX_LIGHT_COUNT (2)
+uniform int u_light_count;
+uniform Light u_lights[2];
+
+struct Material {
+    vec3  ambient;
+    vec3  diffuse;
+    vec3  specular;
+    float spec_pow;
+};
+
+uniform vec4 u_ambient;
+
+vec3 calc_shading(inout Material mat, vec3 bg_color)
+{
+    vec3 N = normalize(vNor);
+
+    vec3 color = mat.ambient * bg_color;
+
+    for (int i = 0; i < MAX_LIGHT_COUNT; i += 1) {
+        if (i == u_light_count) { 
+            break; 
+        }
+
+        vec3 L = -normalize(u_lights[i].direction.xyz + eye_dir);
+                
+            float diffuse = max(0.0, dot(N, L));
+            vec3 R = reflect(L, N); // reflection vector about the normal
+            
+            // get the bisector between the normal and the light direction
+            vec3 vec_sum = eye_dir + L;
+            vec3 bisector_N_L = vec_sum / length(vec_sum);
+
+            float specular = pow(max(0.0, dot(bisector_N_L, R)), mat.spec_pow);
+            
+            // Lrgb * ((D_rgb) + (S_rgb))
+            color += u_lights[i].color.rgb * (
+                (mat.diffuse * diffuse) + (mat.specular * specular)
+            );
+    }
+
+    return color;
+}
+
 void main() {
-    vec3 lDir  = vec3(.57,.57,.57);
-    vec3 shade = vec3(.1,.1,.1) + vec3(1.,1.,1.) * max(0., dot(lDir, normalize(vNor)));
-    vec3 color = shade;
+    eye_dir = normalize(-vWorldPos);
+    Material mat = Material(
+      vec3(0.2, 0.1, 0.1),
+      vec3(226. / 255., 88. / 255., 34. / 255.),
+      vec3(.5,.5,.5),
+      0.7
+    );
+    vec3 color = calc_shading(mat, u_ambient.rgb);
 
-    // HIGHLIGHT CURSOR POSITION WHILE MOUSE IS PRESSED
-
-    if (uCursor.z > 0. && min(abs(uCursor.x - vXY.x), abs(uCursor.y - vXY.y)) < .01)
-          color = vec3(1.,1.,1.);
-
-    fragColor = vec4(sqrt(color * uColor), 1.0);
+    fragColor = vec4(sqrt(color), 1.0);
 }
 
 
