@@ -639,9 +639,6 @@ async function setup(state) {
             gl.enableVertexAttribArray(state.aUVLoc); // enable the attribute
         }
     }
-
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 }
 
 
@@ -700,75 +697,75 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
     gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
 
-        gl.bindVertexArray(state.vao);
+    gl.bindVertexArray(state.vao);
 
+    m.save();
+        Mat.identity(m.matrix());
+        Mat.translate(m.matrix(), 0,0,-2);
+
+
+        Mat.rotateX(m.matrix(), Math.PI / 16);
+        Mat.rotateY(m.matrix(), 0.2 * state.time + Math.PI / 8);
+        Mat.scaleXYZ(m.matrix(), 0.2);
+
+        {
             m.save();
-            Mat.identity(m.matrix());
-            Mat.translate(m.matrix(), 0,0,-2);
+                Mat.scale(m.matrix(), 100, .1, .2);
+            
 
+                gl.uniform3fv(state.uColorLoc, state.color0 );
+                gl.uniformMatrix4fv(state.uModelLoc, false, m.matrix() );
 
-            Mat.rotateX(m.matrix(), Math.PI / 16);
-            Mat.rotateY(m.matrix(), 0.2 * state.time + Math.PI / 8);
-            Mat.scaleXYZ(m.matrix(), 0.2);
-
-            {
-                m.save();
-                    Mat.scale(m.matrix(), 100, .1, .2);
+                gl.uniform1f(state.uDistortLoc, 0.0);
                 
+                gl.disable(gl.BLEND);
+                gl.drawElements(gl.TRIANGLES, cubeIndexCount, gl.UNSIGNED_SHORT, 0);
+            m.restore();
+        }
+        m.save();
+
+
+        {
+            gl.bindVertexArray(state.vaoCyl);
+            gl.uniform1f(state.uDistortLoc, 1.0);
+
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            
+            Mat.scaleXYZ(m.matrix(), 1);
+            for (let i = 0; i < 15; i += 1) {
+                m.save();
+                    Mat.translate(m.matrix(), 10 * sin01(state.time + (i + 2.5)), 0, i * 0.01);
+                    if ((i % 2 == 1)) {
+                        Mat.skewXRelY(m.matrix(), 0.5);
+                    }
+
+                    m.save();
+                    Mat.rotateX(m.matrix(), ((i & 0 == 0) ? -1 : 1) * i * state.time * 0.8);
+                    Mat.scaleY(m.matrix(), (1/i) * 16.0 * sin(.5 * state.time + i));
+                    Mat.scale(m.matrix(), 0.2, 2, 0.2)
+
 
                     gl.uniform3fv(state.uColorLoc, state.color0 );
                     gl.uniformMatrix4fv(state.uModelLoc, false, m.matrix() );
+                    gl.drawElements(gl.TRIANGLES, state.cylI.length, gl.UNSIGNED_SHORT, 0);
+                    m.restore();
+                
+                m.save();
+                    Mat.identity(m.matrix());
+                    Mat.translate(m.matrix(), 0, 0, 1);
 
-                    gl.uniform1f(state.uDistortLoc, 1.0);
-                    gl.drawElements(gl.TRIANGLES, cubeIndexCount, gl.UNSIGNED_SHORT, 0);
+
+                    gl.uniform3fv(state.uColorLoc, state.color0 );
+                    gl.uniformMatrix4fv(state.uModelLoc, false, m.matrix() );
+                    gl.drawElements(gl.TRIANGLES, state.cylI.length, gl.UNSIGNED_SHORT, 0);
+                m.restore();
                 m.restore();
             }
-            m.save();
+        }
+        m.restore(); 
 
-
-            //Mat.translate(m.matrix(), 10.0 * sin(state.time),.5,0);
-            {
-                gl.bindVertexArray(state.vaoCyl);
-                gl.uniform1f(state.uDistortLoc, 1.0);
-
-                //Mat.translate(m.matrix(), 1,0,0);
-                //Mat.rotateY(m.matrix(), state.time);
-                //Mat.translate(m.matrix(), 1,0,0);
-                
-                Mat.scaleXYZ(m.matrix(), 1);
-                for (let i = 0; i < 15; i += 1) {
-                    m.save();
-                        Mat.translate(m.matrix(), 10 * sin01(state.time + (i + 2.5)), 0, i * 0.01);
-                        if ((i % 2 == 1)) {
-                            Mat.skewXRelY(m.matrix(), 0.5);
-                        }
-
-                        m.save();
-                        Mat.rotateX(m.matrix(), ((i & 0 == 0) ? -1 : 1) * i * state.time * 0.8);
-                        Mat.scaleY(m.matrix(), (1/i) * 16.0 * sin(.5 * state.time + i));
-                        Mat.scale(m.matrix(), 0.2, 2, 0.2)
-
-
-                        gl.uniform3fv(state.uColorLoc, state.color0 );
-                        gl.uniformMatrix4fv(state.uModelLoc, false, m.matrix() );
-                        gl.drawElements(gl.TRIANGLES, state.cylI.length, gl.UNSIGNED_SHORT, 0);
-                        m.restore();
-                    
-                    m.save();
-                        Mat.identity(m.matrix());
-                        Mat.translate(m.matrix(), 0, 0, 1);
-
-
-                        gl.uniform3fv(state.uColorLoc, state.color0 );
-                        gl.uniformMatrix4fv(state.uModelLoc, false, m.matrix() );
-                        gl.drawElements(gl.TRIANGLES, state.cylI.length, gl.UNSIGNED_SHORT, 0);
-                    m.restore();
-                    m.restore();
-                }
-            }
-            m.restore(); 
-
-            m.restore();
+    m.restore();
 }
 
 function onEndFrame(t, state) {
