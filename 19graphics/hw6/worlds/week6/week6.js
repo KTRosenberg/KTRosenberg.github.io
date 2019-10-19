@@ -238,7 +238,7 @@ async function onReload(state) {
 // note: mark your setup function as "async" if you need to "await" any asynchronous tasks
 // (return JavaScript "Promises" like in loadImages())
 async function setup(state) {
-    hotReloadFile(getPath("world.js"));
+    hotReloadFile(getPath("week6.js"));
 
     matrixModule = await import(getPath("matrix.js"));
     Mat = matrixModule.Matrix;
@@ -533,8 +533,9 @@ function onStartFrame(t, state) {
             }
     }
     if (!state.world.objInfo.isSelected && state.world.objInfo.position[1] > 0.0) {
-        state.world.objInfo.position[1] = Math.max(0.0, window.POS_START - (0.00001 * (state.time - window.TSTART_FALL) * (state.time - window.TSTART_FALL)));
+        state.world.objInfo.position[1] = window.POS_START - (0.00001 * (state.time - window.TSTART_FALL) * (state.time - window.TSTART_FALL));
     }
+    state.world.objInfo.position[1] = Math.max(0.0, state.world.objInfo.position[1]);
 
     if (Input.keyWentDown(KEY_RESET_POS)) {
         const v = state.world.v;
@@ -711,16 +712,19 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
         const count     = cubeIndexCount;
         
         if (state.world.objInfo.isSelected) {
-            for (let i = 0; i < 10; i += 1) {
+            state.selectionTime = state.selectionTime || sec;
+            const surroundCount = 8;
+            for (let i = 0; i < surroundCount; i += 1) {
             M.save();
                 let X = [ state.world.objInfo.position[0], 
                  state.world.objInfo.position[1],  state.world.objInfo.position[2]];
-                 X[0] += 7.0 * Math.cos(sec + i * (Math.PI * 2) / 10);
-                 X[2] += 7.0 * Math.sin(sec + i * (Math.PI * 2) / 10);
+                 X[0] += Math.min(7.0, 9.0 * (sec - state.selectionTime)) * Math.cos(sec + i * (Math.PI * 2) / surroundCount);
+                 X[2] += Math.min(7.0, 9.0 * (sec - state.selectionTime)) * Math.sin(sec + i * (Math.PI * 2) / surroundCount);
                 Mat.translateV(M.matrix(), X);
                 Mat.rotateX(M.matrix(), sec + (i ));
                 Mat.rotateY(M.matrix(), sec + (i ));
                 Mat.rotateZ(M.matrix(), -sec + (i ));
+                Mat.skewXRelY(M.matrix(), 0.05);
                 gl.uniformMatrix4fv(state.uModelLoc, false, 
                     M.matrix()
                 );
@@ -729,6 +733,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
             M.restore();
             }
         } else {
+            state.selectionTime = undefined;
         M.save();
             Mat.translateV(M.matrix(), state.world.objInfo.position);
             gl.uniformMatrix4fv(state.uModelLoc, false, 

@@ -42,7 +42,7 @@ void main() {
     }
     
     // taken from https://webgl2fundamentals.org/webgl/lessons/webgl-fog.html
-    float fog_dist = length(vView);
+    float fog_dist = length(vView) + 2.5 * abs(sin(uTime));
     float fog_amount = clamp(
         1.0 - exp2(-fog_density * fog_density * fog_dist * fog_dist * LOG2),
         0.0, 1.0
