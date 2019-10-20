@@ -1,9 +1,13 @@
 #version 300 es
 precision highp float;
 
+// NOTE TO VIEWER:
+//
 // Keyboard Input: up,down,left,right movement,
 // control to "pick up and put down" the object
-// Press "Hide" while playing
+// to spawn a ring of objects
+// Press "Hide" while playing to hide the code
+//
 
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNor;
