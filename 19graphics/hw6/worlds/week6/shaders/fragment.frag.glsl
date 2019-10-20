@@ -32,6 +32,7 @@ struct Light {
 uniform int u_light_count;
 uniform Light u_lights[2];
 
+
 struct Material {
     vec3  ambient;
     vec3  diffuse;
@@ -77,15 +78,21 @@ float sin01(float val)
     return (sin(val) + 1.0) / 2.0;
 }
 
+vec3 ldir = vec3(0.0, 0.5, -1);
+
 void main() {
+    ldir.z = sin(uTime);
+    ldir = normalize(ldir);
     if (uTextureActive == 1) {
+
+
         vec4 color0 = texture(uTex0, vUV /*+ sin(uTime)*/);
         vec4 color1 = texture(uTex0, vUV/*2*/);
 
         color1 = mix(color1, vec4(color0.rgb, 1.0), cos(uTime) * cos(uTime));
-    
+        
         fragColor = mix(color0, color1, sin(uTime));
-    } else {
+} else {
         if(fract(vUV.x / 0.001f) > 0.1f && fract(vUV.y / 0.001f) > 0.1f) {
             vec3 wXYZ = abs(vWorld.xyz);
             
@@ -105,5 +112,16 @@ void main() {
         0.0, 1.0
     );
 
+    Material mat = Material(
+      fog_color.rgb,
+      vec3(226. / 255., 88. / 255., 34. / 255.),
+      vec3(.5,.5,.5),
+      20.0
+    );
+  
+   
+    fragColor.rgb += calc_shading(normalize(-vView), mat, fog_color.rgb);
     fragColor = mix(fragColor, fog_color, fog_amount);
+
+    
 }

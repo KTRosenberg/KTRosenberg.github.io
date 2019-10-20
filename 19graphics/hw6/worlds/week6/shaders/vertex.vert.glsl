@@ -5,6 +5,8 @@ precision highp float;
 //
 // Keyboard Input: up,down,left,right movement,
 // control to "pick up and put down" the object
+//
+// Hold shift + up/down to move vertically
 // to spawn a ring of objects
 // Press "Hide" while playing to hide the code
 //
@@ -57,7 +59,7 @@ void main() {
   // Multiply the position by the matrix.
   gl_Position = uProj * uView * uModel * vec4(aPos, 1.0);
   
-  vNor = aNor;
+  vNor = (transpose(inverse(uView * uModel)) * vec4(aNor, 0.)).xyz;
   // Pass the texcoord to the fragment shader.
   vUV = aUV;
 

@@ -313,6 +313,44 @@ async function setup(state) {
 
 
                     gl.uniform1i(state.uTextureActiveLoc, 1);
+
+                    state.shader0Info = {
+                        lights    : [],
+                        materials : []
+                    };
+
+                    const lightCount = 1;
+
+                    state.lights = [
+                        new Float32Array([
+                            .57 + sin(state.time),.57,.57, 0.0, 
+                            1.0, 1.0, 1.0, 1.0
+                        ]),
+                    ]
+
+
+                    state.uLightCountLoc  = gl.getUniformLocation(program, 'u_light_count');
+                    gl.uniform1i(state.uLightCountLoc, lightCount);
+                    for (let i = 0; i < lightCount; i += 1) {
+                        state.shader0Info.lights.push({
+                            directionLoc : gl.getUniformLocation(program, 'u_lights[' + i + '].direction'),
+                            colorLoc     : gl.getUniformLocation(program, 'u_lights[' + i + '].color')
+                        });
+                    }
+                    state.shader0Info.uAmbientLoc = gl.getUniformLocation(program, 'u_ambient');
+                    gl.uniform4fv(state.shader0Info.uAmbientLoc, [0.25, 0.01, 0.2, 1.0]);
+
+                    state.uLightsLoc = gl.getUniformLocation(program, 'u_lights[0].direction');
+
+                    for (let i = 0; i < state.lights.length; i += 1) {
+                        const dirArr = state.lights[i].subarray(0, 4);
+                        const colorArr = state.lights[i].subarray(4, 8);
+
+                        vec4_normalize(dirArr, dirArr);
+
+                        gl.uniform4fv(state.shader0Info.lights[i].directionLoc, dirArr);
+                        gl.uniform4fv(state.shader0Info.lights[i].colorLoc, colorArr)
+                    }
                 } 
             },      
             {
@@ -973,6 +1011,25 @@ function onStartFrame(t, state) {
         direction : dir
     };
 
+    state.lights = [
+        new Float32Array([
+            cos(state.time / 1000.0),0.01,-0.2, 0.0, 
+            .9, 0.9, .67, 1.0
+        ]),
+    ]
+
+
+
+    for (let i = 0; i < state.lights.length; i += 1) {
+        const dirArr = state.lights[i].subarray(0, 4);
+        const colorArr = state.lights[i].subarray(4, 8);
+
+        vec4_normalize(dirArr, dirArr);
+
+        gl.uniform4fv(state.shader0Info.lights[i].directionLoc, dirArr);
+        gl.uniform4fv(state.shader0Info.lights[i].colorLoc, colorArr)
+    }
+
 
 }
 
@@ -1025,7 +1082,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
         const offset    = 0;
         const count     = cubeIndexCount;
         let drawFuncs = [state.drawCube, state.drawSphere, state.drawTorus, state.drawCappedCylinder]
-        if (state.world.objInfo.isSelected) {
+        if (state.world.objInfo.isSelected || state.world.objInfo.position[1] > 0.7) {
             state.selectionTime = state.selectionTime || sec;
             const surroundCount = 8;
             for (let i = 0; i < surroundCount; i += 1) {
