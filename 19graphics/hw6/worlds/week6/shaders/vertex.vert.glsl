@@ -1,9 +1,9 @@
 #version 300 es
 precision highp float;
 
-// NOTE TO VIEWER:
+// INSTRUCTIONS TO VIEWER:
 //
-// Keyboard Input: up,down,left,right movement,
+// Keyboard Input: up,down = forward/backaward, left,right = rotate
 // control to "pick up and put down" the object
 //
 // Hold shift + up/down to move vertically
@@ -70,3 +70,4 @@ void main() {
   vWorld = (uModel * vec4(aPos, 1.0)).xyz;
   vView = (uView * uModel * vec4(aPos, 1.0)).xyz;
 }
+            
