@@ -36,15 +36,15 @@ void main() {
     vec3 specular = vec3(.4,.4,.4);
     float p = 30.;
 
-    Ldir[0] = normalize(vec3(1.,1.,2.));
+    Ldir[0] = normalize(vec3(0.0, 0.0, -1.0));
     Ldir[1] = normalize(vec3(-1.,-1.,-1.));
-    Lrgb[0] = vec3(.3,.3,1.);
+    Lrgb[0] = vec3(1.0,0.0,0.0);
     Lrgb[1] = vec3(.6,.3,.1);
 
     vec3 normal = normalize(vNor);
 
     vec3 color = ambient;
-    for (int i = 0 ; i < 2 ; i++) {
+    for (int i = 0 ; i < 1 ; i++) {
        float d = dot(Ldir[i], normal);
        if (d > 0.)
           color += diffuse * d * Lrgb[i];

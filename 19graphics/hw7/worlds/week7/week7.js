@@ -1,6 +1,19 @@
 "use strict"
 
+function vec2_normalize(arr, out) {
+    out = out || new Float32Array([0.0, 0.0]);
+    const x = arr[0];
+    const y = arr[1];;
 
+    let len = (x * x) + (y * y);
+    if (len > 0) {
+        len = 1 / Math.sqrt(len);
+    }
+    out[0] = x * len;
+    out[1] = y * len;
+
+    return out;
+}
 function vec3_normalize(arr, out) {
     out = out || new Float32Array([0.0, 0.0, 0.0]);
     const x = arr[0];
@@ -415,6 +428,17 @@ function createMeshVertices(rows, cols, fnEvaluate, opts) {
 //    ]
 // }
 
+function evalSpline(t, coeff) {
+    const a = coeff[0];
+    const b = coeff[1];
+    const c = coeff[2];
+    const d = coeff[3];
+
+    const t2 = t*t;
+    const t3 = t2*t;
+
+    return (a*t3) + (b*t2) + (c*t) + d;
+}
 
 let uvToCubicCurvesRibbon = (vertices, offset, u, v, arg) => {
 
@@ -439,6 +463,91 @@ let uvToCubicCurvesRibbon = (vertices, offset, u, v, arg) => {
     // COMPUTE A CORRECT VALUE FOR THE SURFACE NORMAL AT EACH VERTEX.
     // IF YOU CAN'T FIGURE OUT HOW TO PRODUCE A RIBBON THAT VARIES IN Z,
     // IT IS OK TO CREATE A RIBBON WHERE ALL THE Z VALUES ARE THE SAME.
+
+    const w = 20 * arg.width;
+    const curve = arg.data;
+    const curveCount = curve.length;
+
+    const slen = 1.0 / curveCount;
+    const uwhich0 = Math.min(curveCount - 1, Math.floor(u * curveCount));
+    const vwhich0 = uwhich0; //Math.min(curveCount - 1, Math.floor(v * curveCount));
+
+    const EPSILON = 0.001;
+    const ue = u + EPSILON;
+    const ve = v; // + EPSILON;
+
+    const uwhich1 =  Math.min(curveCount - 1, Math.floor(ue * curveCount));
+    const vwhich1 =  uwhich1;//Math.min(curveCount - 1, Math.floor(ve * curveCount));
+
+    let x = 0;
+    let y = 0;
+    let z = 0;
+    let nx = 0;
+    let ny = 0;
+    let nz = 1;
+
+    const seg0u = arg.data[uwhich0];
+    const seg1u = arg.data[uwhich1];
+
+    let seg;
+
+    function findSubT(idx_, len_, t_) {
+        return (t_ - (idx_ * len_)) / len_;
+    }
+    // evaluate x
+    
+        const x0 = evalSpline(findSubT(uwhich0, slen, u ), seg0u[0]);
+        const x1 = evalSpline(findSubT(uwhich1, slen, ue), seg0u[0]);
+
+        const dx = x1 - x0;
+    
+    // evaluate y
+        const y0 = evalSpline(findSubT(uwhich0, slen, u ), seg0u[1]);
+        const y1 = evalSpline(findSubT(uwhich1, slen, ue), seg1u[1]);
+
+        const dy = y1 - y0;
+
+    // evaluate z
+        const z0 = evalSpline(findSubT(uwhich0, slen, u), seg0u[2]);
+        const z1 = evalSpline(findSubT(uwhich1, slen, ue), seg0u[2]);
+
+        const dz = z1 - z0;
+        x = x0 + (w * (dy - (dy * 2*v)));
+        y = y0 + (w * (dx - (dx * 2*(1 - v))));
+
+        // if (v == 0.0) {
+        //     x = x0 + (w * dy);
+        //     y = y0 - (w * dx);
+        // } else if (v == 1.0) {
+        //     x = x0 - (w * dy);
+        //     y = y0 + (w * dx);
+        // }
+
+
+
+    z  = z0;
+
+    // const n = [1, -dx/dz];
+    // vec2_normalize(n, n);
+
+    // nx = n[0];
+    // ny = 0;
+    // nz = n[1];
+
+    const n = [-dz, 0, dx];
+    vec3_normalize(n, n);
+    nx = n[0];
+    ny = n[1];
+    nz = n[2];
+
+    vertices[offset]     = x;
+    vertices[offset + 1] = y;
+    vertices[offset + 2] = z;
+    vertices[offset + 3] = nx;
+    vertices[offset + 4] = ny;
+    vertices[offset + 5] = nz;
+    vertices[offset + 6] = u;
+    vertices[offset + 7] = v;
 }
 
 
@@ -548,7 +657,7 @@ let uvToCubicPatch = (vertices, offset, u, v, arg) => {
 
     const norm = vec3_cross(du, dv, buf3);
 
-    vec3_normalize(norm, norm);
+    const outn = normalize(norm);
 
     x = P[0];
     y = P[1];
@@ -670,6 +779,78 @@ async function setup(state) {
         }
     );
 
+    // let shaderSource2 = await MREditor.loadAndRegisterShaderForLiveEditing(
+    //     gl,
+    //     "splineShader",
+    //     { 
+    //         onNeedsCompilation : (args, libMap, userData) => {
+    //             const stages = [args.vertex, args.fragment];
+    //             const output = [args.vertex, args.fragment];
+
+    //             const implicitNoiseInclude = true;
+    //             if (implicitNoiseInclude) {
+    //                 let libCode = MREditor.libMap.get("pnoise");
+
+    //                 for (let i = 0; i < 2; i += 1) {
+    //                     const stageCode = stages[i];
+    //                     const hdrEndIdx = stageCode.indexOf(';');
+                        
+    //                     /*
+    //                     const hdr = stageCode.substring(0, hdrEndIdx + 1);
+    //                     output[i] = hdr + "\n#line 1 1\n" + 
+    //                                 libCode + "\n#line " + (hdr.split('\n').length) + " 0\n" + 
+    //                                 stageCode.substring(hdrEndIdx + 1);
+    //                     console.log(output[i]);
+    //                     */
+    //                     const hdr = stageCode.substring(0, hdrEndIdx + 1);
+                        
+    //                     output[i] = hdr + "\n#line 2 1\n" + 
+    //                                 "#include<pnoise>\n#line " + (hdr.split('\n').length + 1) + " 0" + 
+    //                         stageCode.substring(hdrEndIdx + 1);
+
+    //                     //console.log(output[i]);
+    //                 }
+    //             }
+
+    //             MREditor.preprocessAndCreateShaderProgramFromStringsAndHandleErrors(
+    //                 output[0],
+    //                 output[1],
+    //                 libMap
+    //             );
+    //         },
+    //         onAfterCompilation : (program) => {
+    //             state.program = program;
+
+    //             gl.useProgram(program);
+
+    //             state.uColorLoc        = gl.getUniformLocation(program, 'uColor');
+    //             state.uCursorLoc       = gl.getUniformLocation(program, 'uCursor');
+    //             state.uModelLoc        = gl.getUniformLocation(program, 'uModel');
+    //             state.uProjLoc         = gl.getUniformLocation(program, 'uProj');
+    //             state.uTex0Loc         = gl.getUniformLocation(program, 'uTex0');
+    //             state.uTex1Loc         = gl.getUniformLocation(program, 'uTex1');
+    //             state.uTex2Loc         = gl.getUniformLocation(program, 'uTex2');
+    //             state.uTexIndexLoc     = gl.getUniformLocation(program, 'uTexIndex');
+    //             state.uTimeLoc         = gl.getUniformLocation(program, 'uTime');
+    //             state.uViewLoc         = gl.getUniformLocation(program, 'uView');
+
+    //             gl.uniform1i(state.uTex0Loc, 0);
+    //             gl.uniform1i(state.uTex1Loc, 1);
+    //             gl.uniform1i(state.uTex2Loc, 2);
+    //         } 
+    //     },
+    //     {
+    //         paths : {
+    //             vertex   : "shaders/vertex.vert.glsl",
+    //             fragment : "shaders/fragment.frag.glsl"
+    //         },
+    //         foldDefault : {
+    //             vertex   : true,
+    //             fragment : false
+    //         }
+    //     }
+    // );
+
     state.turnAngle = -.4;
     state.cursor = ScreenCursor.trackCursor(MR.getCanvas());
 
@@ -777,6 +958,10 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
         )
     }
 
+    gl.useProgram(state.program);
+
+    gl.disable(gl.CULL_FACE);
+
     m.identity();
 
     m.translate(0,0,-4);
@@ -786,8 +971,9 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     let by = 1;
 
     let S = .3 * Math.sin(state.time);
+    by *= S;
 
-    let hermiteCurveInfo = createMeshVertices(48, 2, uvToCubicCurvesRibbon,
+    let hermiteCurveInfo = createMeshVertices(48, 1, uvToCubicCurvesRibbon,
        {
           width: .05,
 	  data: [
@@ -810,25 +996,27 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
        }
     );
 
-    let bezierCurveInfo = createMeshVertices(32, 2, uvToCubicCurvesRibbon,
+    let bezierCurveInfo = createMeshVertices(32, 1, uvToCubicCurvesRibbon,
        {
-          width: 0.06,
+          width: 0.6,
 	  data: [
              toCubicCurveCoefficients(BezierBasisMatrix, [
                 [ -1, -.6, -.3,  0], // A.x B.x C.x D.x
                 [  0,  by, -by,  0], // A.y B.y C.y D.y
-                [-.3,  .3,   0,-.1]  // A.z B.z C.z D.z
+                [-by,  .3,   0,-.1]  // A.z B.z C.z D.z
              ]),
              toCubicCurveCoefficients(BezierBasisMatrix, [
-                [  0, .3, .6,  1],    // A.x B.x C.x D.x
-                [  0, by,  0,  1],    // A.y B.y C.y D.y
-                [-.1,-.1,-.3,-.6]     // A.z B.z C.z D.z
+                [  0, .3, -.6,  -1],    // A.x B.x C.x D.x
+                [  0, by,  -by,  0],    // A.y B.y C.y D.y
+                [-.1,0,.3,-by]     // A.z B.z C.z D.z
              ])
           ]
        }
     );
 
-    let st = 1 // 3 * state.time;
+
+
+    let st = 3 * state.time;
     let s0 = .7 * Math.sin(st);
     let s1 = .7 * Math.sin(st + 1);
     let s2 = .7 * Math.sin(st + 2);
@@ -863,15 +1051,61 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     m.restore();
 
     m.save();
-    m.translate(0,0,-3);
+    m.translate(0,1,-3);
+    m.rotateZ(state.time);
+    
+    m.scale(2, 2, 1);
     drawShape(gl.TRIANGLE_STRIP, [1,0,1], null, bezierCurveInfo.vertices, bezierCurveInfo.indices);
     m.restore();
 
+    const theta = Math.PI/2;
+    const sc = 0.5;
     m.save();
-    m.translate(0,0,-4);
-    m.scale(.6,.6,.6);
-    drawShape(gl.TRIANGLE_STRIP, [1,1,1], 1, bezierPatchInfo.vertices, bezierPatchInfo.indices);
+    for (let z = -20; z < 0; z += 2) {
+        for (let x = -10; x < 10; x += 1) {
+            m.save();
+            
+            m.translate(x * 2, -1, z + 15);
+
+            let sx = 1;
+            let sy = 1;
+            let sz = 1;
+
+                
+                if (x % 2 == 1) {
+                    console.log("odd");
+                    sz = -1;
+                } else if (x % 2 == 0) {
+                    console.log("even");
+                    sz = 1;
+                }          
+
+            m.scale(sz, 1, sz);
+            //m.rotateX(theta);
+
+            drawShape(gl.TRIANGLE_STRIP, [1,1,1], 1, bezierPatchInfo.vertices, bezierPatchInfo.indices);
+            
+            m.restore();
+        }
+        break;
+    }
+
+    // m.scale(sc * 1, sc * 1, 1);
+    // m.translate(2,0,-4);
+    // m.scale(-1, -1, 1);
+    // m.rotateX(theta);
+    // //m.rotateY(state.time);
+    // drawShape(gl.TRIANGLE_STRIP, [1,1,1], 1, bezierPatchInfo.vertices, bezierPatchInfo.indices);
+    // m.restore();
+    // m.save();
+    // m.scale(sc * 1, sc * 1, 1);
+    // m.translate(-2,0,-4);
+    // m.scale(-1, -1, 1);
+    // m.rotateX(theta);
+    // drawShape(gl.TRIANGLE_STRIP, [1,1,1], 1, bezierPatchInfo.vertices, bezierPatchInfo.indices);
+    // m.restore();
     m.restore();
+
 }
 
 function onEndFrame(t, state) {
