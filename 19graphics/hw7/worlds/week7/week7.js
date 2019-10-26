@@ -1,6 +1,159 @@
 "use strict"
 
 
+function vec3_normalize(arr, out) {
+    out = out || new Float32Array([0.0, 0.0, 0.0]);
+    const x = arr[0];
+    const y = arr[1];
+    const z = arr[2];
+
+    let len = (x * x) + (y * y) + (z * z);
+    if (len > 0) {
+        len = 1 / Math.sqrt(len);
+    }
+    out[0] = x * len;
+    out[1] = y * len;
+    out[2] = z * len;
+
+    return out;
+}
+
+function vec4_normalize(arr, out) {
+    out = out || new Float32Array([0.0, 0.0, 0.0, 0.0]);
+    const x = arr[0];
+    const y = arr[1];
+    const z = arr[2];
+    const w = arr[3];
+
+    let len = (x * x) + (y * y) + (z * z) + (w * w);
+    if (len > 0) {
+        len = 1 / Math.sqrt(len);
+    }
+    out[0] = x * len;
+    out[1] = y * len;
+    out[2] = z * len;
+    out[3] = w * len;
+
+    return out;
+}
+
+function vec3_dot(v0, v1) {
+    return (v0[0] * v1[0]) +
+           (v0[1] * v1[1]) +
+           (v0[2] * v1[2]);
+}
+
+function vec4_dot(v0, v1) {
+    return (v0[0] * v1[0]) +
+           (v0[1] * v1[1]) +
+           (v0[2] * v1[2]) +
+           (v0[3] * v1[3]);
+}
+
+function vec3_scale(v, s, out) {
+    out = out || new Float32Array([0, 0, 0]);
+    out[0] = v[0] * s;
+    out[1] = v[1] * s;
+    out[2] = v[2] * s;
+
+    return out;
+}
+
+function vec4_scale(v, s, out) {
+    out = out || new Float32Array([0, 0, 0, 0]);
+    out[0] = v[0] * s;
+    out[1] = v[1] * s;
+    out[2] = v[2] * s;
+    out[3] = v[3] * s;
+
+    return out;
+}
+
+function vec3_project(v0, v1, out) {
+    out = out || new Float32Array([0, 0, 0]);
+    return vec3_scale(v1, vec3_dot(v0, v1) / vec3_dot(v0, v0), out);
+}
+
+function vec4_project(v0, v1, out) {
+    out = out || new Float32Array([0, 0, 0, 0]);
+    return vec4_scale(v1, vec3_dot(v0, v1) / vec3_dot(v0, v0), out);
+}
+
+function vec3_add(v0, v1, out) {
+    out = out || new Float32Array([0, 0, 0]);
+    out[0] = v0[0] + v1[0];
+    out[1] = v0[1] + v1[1];
+    out[2] = v0[2] + v1[2];
+
+    return out;
+}
+
+function vec4_add(v0, v1, out) {
+    out = out || new Float32Array([0, 0, 0, 0]);
+    out[0] = v0[0] + v1[0];
+    out[1] = v0[1] + v1[1];
+    out[2] = v0[2] + v1[2];
+    out[3] = v0[3] + v1[3];
+
+    return out;
+}
+
+function vec3_subtract(v0, v1, out) {
+    out = out || new Float32Array([0, 0, 0]);
+    out[0] = v0[0] - v1[0];
+    out[1] = v0[1] - v1[1];
+    out[2] = v0[2] - v1[2];
+
+    return out;
+}
+
+function vec4_subtract(v0, v1, out) {
+    out = out || new Float32Array([0, 0, 0, 0]);
+    out[0] = v0[0] - v1[0];
+    out[1] = v0[1] - v1[1];
+    out[2] = v0[2] - v1[2];
+    out[3] = v0[3] - v1[3];
+
+    return out;
+}
+
+function vec3_multiply(v0, v1, out) {
+    out = out || new Float32Array([0, 0, 0]);
+    out[0] = v0[0] * v1[0];
+    out[1] = v0[1] * v1[1];
+    out[2] = v0[2] * v1[2];
+
+    return out;    
+}
+
+function vec4_multiply(v0, v1, out) {
+    out = out || new Float32Array([0, 0, 0, 0]);
+    out[0] = v0[0] * v1[0];
+    out[1] = v0[1] * v1[1];
+    out[2] = v0[2] * v1[2];
+    out[3] = v0[3] * v1[3];
+
+    return out;    
+}
+
+function vec3_divide(v0, v1, out) {
+    out = out || new Float32Array([0, 0, 0]);
+    out[0] = v0[0] / v1[0];
+    out[1] = v0[1] / v1[1];
+    out[2] = v0[2] / v1[2];
+
+    return out;    
+}
+
+function vec4_divide(v0, v1, out) {
+    out = out || new Float32Array([0, 0, 0, 0]);
+    out[0] = v0[0] / v1[0];
+    out[1] = v0[1] / v1[1];
+    out[2] = v0[2] / v1[2];
+    out[3] = v0[3] / v1[3];
+
+    return out;    
+}
 ////////////////////////////// USEFUL VECTOR OPERATIONS
 
 let dot = (a, b) => {
@@ -28,12 +181,25 @@ let cross = (a, b) => [ a[1] * b[2] - a[2] * b[1],
                         a[2] * b[0] - a[0] * b[2],
                         a[0] * b[1] - a[1] * b[0] ];
 
+function vec3_cross(a, b, out) {
+    out = out || new Float32Array(3);
 
+    out[0] = a[1] * b[2] - a[2] * b[1];
+    out[1] = a[2] * b[0] - a[0] * b[2];
+    out[2] = a[0] * b[1] - a[1] * b[0];
+
+    return out;
+} 
+
+
+function sin01(val) {
+    return (1.0 + sin(val)) / 2.0;
+}
 ////////////////////////////// MATRIX OPERATIONS
 
 
-let cos = t => Math.cos(t);
-let sin = t => Math.sin(t);
+const cos = Math.cos;
+const sin = Math.sin;
 let identity = ()       => [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
 let rotateX = t         => [1,0,0,0, 0,cos(t),sin(t),0, 0,-sin(t),cos(t),0, 0,0,0,1];
 let rotateY = t         => [cos(t),0,-sin(t),0, 0,1,0,0, sin(t),0,cos(t),0, 0,0,0,1];
@@ -97,6 +263,17 @@ let Matrix = function() {
    this.value     = ()      => getVal();
 }
 
+let Mat             = null;
+let matrixModule    = null;
+let M               = null;
+
+async function onReload(state) {
+    return MR.dynamicImport(getPath("matrix.js")).then((myModule) => {
+        matrixModule = myModule;
+        Mat          = matrixModule.Matrix;
+    });
+}
+
 
 ////////////////////////////// SUPPORT FOR SPLINES
 
@@ -139,7 +316,84 @@ const VERTEX_SIZE = 8;    // EACH VERTEX IS: [ x,y,z, nx,ny,nz, u,v ]
 // FUNCTION createMeshVertices() REPEATEDLY CALLS uvToShape(u, v, args).
 // EACH CALL ADDS ANOTHER VERTEX TO THE MESH, IN THE FORM: [x,y,z, nx,ny,nz, u,v]
 
-function createMeshVertices(M, N, uvToShape, arg) {
+function createMeshVertices(rows, cols, fnEvaluate, opts) {
+    if (!fnEvaluate) {
+        return null;
+    }
+
+    const info = {  
+        vertexOffset : 0,
+        vertexCount  : 0,
+        indexCount   : 0,
+        primitive    : gl.TRIANGLE_STRIP
+    };
+
+    const idxOffset = 0;
+
+    const triCount = 2 * (rows) * (cols);
+    const vtxCount = rows * cols;
+
+    // part 1:
+    // sample all of the necessary vertices in the grid
+    // part 2:
+    // create an index buffer for all sampled vertices
+    const indices = []//new Uint16Array((triCount * 3) + ((rows - 2) * 3));
+    function push(arr, el) {
+        arr.push(el);
+    }
+
+    {
+        let inc = 8;
+        let vertices = new Float32Array(inc * (rows + 1) * (cols + 1));
+        let off = 0;
+        
+        for (let u = 0; u < rows + 1; u += 1) {
+            for (let v = 0; v < cols + 1; v += 1) {
+                fnEvaluate(vertices, off, u / rows, v / cols, opts);
+                off += inc;
+            }
+        }
+
+        {
+            let i = idxOffset;
+            for (let r = 0; r < rows; r += 2) {
+                // left to right
+                for (let c = 0; c < cols; c += 1) {
+                    // add a column, except for the last
+                    push(indices, i);
+                    push(indices, i + cols + 1);
+                    i += 1;
+                }
+                // add only one vertex in the last column,
+                // will be added in right to left phase
+                push(indices, i);
+                i += cols + 1;
+
+                if (r + 1 >= rows) {
+                    continue;
+                }
+
+                // right to left
+                for (let c = cols - 1; c >= 0; c -= 1) {
+                    push(indices, i);
+                    push(indices, i + cols + 1);
+                    i -= 1;
+                }
+                push(indices, i);
+                i += cols + 1;
+            }
+            // need to add extraneous vertex
+            push(indices, i);
+
+        }
+
+
+        info.vertices = vertices;
+        info.indices  = new Uint16Array(indices);
+        info.vertexCount = vertices.length / inc;
+        info.indexCount = indices.length;
+        return info;
+    }
 
     // IMPLEMENTATION NOTES:
 
@@ -147,7 +401,7 @@ function createMeshVertices(M, N, uvToShape, arg) {
     // THE ONLY SIGNIFICANT DIFFERENCE IS THAT YOU NEED TO PASS IN
     // arg AS A THIRD ARGUMENT WHEN YOU CALL uvToShape().
 
-    return [ 0,0,0, 0,0,0, 0,0 ]; // THIS LINE IS JUST A DUMMY PLACEHOLDER.
+    //return [ 0,0,0, 0,0,0, 0,0 ]; // THIS LINE IS JUST A DUMMY PLACEHOLDER.
 }
 
 // FOR uvCubicCurvesRibbon(), arg IS IN THE BELOW FORM:
@@ -162,7 +416,7 @@ function createMeshVertices(M, N, uvToShape, arg) {
 // }
 
 
-let uvToCubicCurvesRibbon = (u, v, arg) => {
+let uvToCubicCurvesRibbon = (vertices, offset, u, v, arg) => {
 
     // IMPLEMENTATION NOTES:
 
@@ -196,7 +450,7 @@ let uvToCubicCurvesRibbon = (u, v, arg) => {
 //    [z0,z1, ... z15]   // Bicubic coefficients in z
 // ]
 
-let uvToCubicPatch = (u, v, arg) => {
+let uvToCubicPatch = (vertices, offset, u, v, arg) => {
 
     // IMPLEMENTATION NOTES:
 
@@ -222,6 +476,95 @@ let uvToCubicPatch = (u, v, arg) => {
     // TO THE SURFACE. YOU CAN NORMALIZE THIS VECTOR TO GET THE SURFACE NORMAL.
 
     // FINALLY, RETURN [ x, y, z,  nx, ny, nz,  u, v ]
+
+
+    let x  = 0;
+    let y  = 0;
+    let z  = 0;
+    let nx = 0;
+    let ny = 0;
+    let nz = 0;
+
+    const Cx = arg[0];
+    const Cy = arg[1];
+    const Cz = arg[2];
+
+    const u1 = u;
+    const u2 = u1*u1;
+    const u3 = u2*u1;
+    const v1 = v;
+    const v2 = v1*v1;
+    const v3 = v2*v1;
+
+    const U = [ u3 , u2 , u1 , 1 ];
+    const V = [ v3 , v2 , v1 , 1 ];
+
+    const buf  = [0, 0, 0, 1];
+    const buf2 = [0, 0, 0, 1];
+    const buf3 = [0, 0, 0];
+    const P = [
+        dot(U, Mat.multiplyV(Cx, V, buf)),
+        dot(U, Mat.multiplyV(Cy, V, buf)),
+        dot(U, Mat.multiplyV(Cz, V, buf)),
+        1
+    ];
+
+    const EPSILON = 0.001;
+
+    const u1e = u + EPSILON;
+    const u2e = u1e * u1e;
+    const u3e = u2e * u1e;
+    U[0] = u1e;
+    U[1] = u2e;
+    U[2] = u3e;
+    // no need to change v
+
+    const PU = [
+        dot(U, Mat.multiplyV(Cx, V, buf)),
+        dot(U, Mat.multiplyV(Cy, V, buf)),
+        dot(U, Mat.multiplyV(Cz, V, buf)),
+        1
+    ];
+
+    const v1e = v + EPSILON;
+    const v2e = v1e * v1e;
+    const v3e = v2e * v1e;
+    U[0] = u1;
+    U[1] = u2;
+    U[2] = u3;
+    V[0] = v1e;
+    V[1] = v2e;
+    V[2] = v3e;
+
+    const PV = [
+        dot(U, Mat.multiplyV(Cx, V, buf)),
+        dot(U, Mat.multiplyV(Cy, V, buf)),
+        dot(U, Mat.multiplyV(Cz, V, buf)),
+        1
+    ];
+
+    const du = vec4_subtract(PU, P, buf);
+    const dv = vec4_subtract(PV, P, buf2)
+
+    const norm = vec3_cross(du, dv, buf3);
+
+    vec3_normalize(norm, norm);
+
+    x = P[0];
+    y = P[1];
+    z = P[2];
+    nx = norm[0];
+    ny = norm[1];
+    nz = norm[2];
+
+    vertices[offset]     = x;
+    vertices[offset + 1] = y;
+    vertices[offset + 2] = z;
+    vertices[offset + 3] = nx;
+    vertices[offset + 4] = ny;
+    vertices[offset + 5] = nz;
+    vertices[offset + 6] = u;
+    vertices[offset + 7] = v;
 }
 
 
@@ -230,6 +573,9 @@ let uvToCubicPatch = (u, v, arg) => {
 
 async function setup(state) {
     hotReloadFile(getPath('week7.js'));
+
+    matrixModule = await import(getPath("matrix.js"));
+    Mat          = matrixModule.Matrix;
 
     const images = await imgutil.loadImagesPromise([
        getPath("textures/brick.png"),
@@ -334,6 +680,9 @@ async function setup(state) {
     state.buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, state.buffer);
 
+    state.bufferIndices = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, state.bufferIndices);
+
     let bpe = Float32Array.BYTES_PER_ELEMENT;
 
     let aPos = gl.getAttribLocation(state.program, 'aPos');
@@ -408,12 +757,24 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     gl.uniformMatrix4fv(state.uViewLoc, false, new Float32Array(viewMat));
     gl.uniformMatrix4fv(state.uProjLoc, false, new Float32Array(projMat));
 
-    let drawShape = (color, type, vertices, texture) => {
+    let drawShape = (type, color, texture, vertices, indices) => {
        gl.uniform3fv(state.uColorLoc, color );
        gl.uniformMatrix4fv(state.uModelLoc, false, m.value() );
-       gl.uniform1i(state.uTexIndexLoc, texture === undefined ? -1 : texture);
-       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array( vertices ), gl.STATIC_DRAW);
-       gl.drawArrays(type, 0, vertices.length / VERTEX_SIZE);
+       gl.uniform1i(state.uTexIndexLoc, (texture == null || texture === undefined) ? -1 : texture);
+       gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STREAM_DRAW);
+
+        if (!indices) {
+            gl.drawArrays(type, 0, vertices.length / VERTEX_SIZE);
+            return;
+        }
+
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STREAM_DRAW);
+        gl.drawElements(
+            type,
+            indices.length,
+            gl.UNSIGNED_SHORT,
+            0
+        )
     }
 
     m.identity();
@@ -426,7 +787,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
     let S = .3 * Math.sin(state.time);
 
-    let hermiteCurveVertices = createMeshVertices(48, 2, uvToCubicCurvesRibbon,
+    let hermiteCurveInfo = createMeshVertices(48, 2, uvToCubicCurvesRibbon,
        {
           width: .05,
 	  data: [
@@ -449,7 +810,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
        }
     );
 
-    let bezierCurveVertices = createMeshVertices(32, 2, uvToCubicCurvesRibbon,
+    let bezierCurveInfo = createMeshVertices(32, 2, uvToCubicCurvesRibbon,
        {
           width: 0.06,
 	  data: [
@@ -473,7 +834,7 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     let s2 = .7 * Math.sin(st + 2);
     let s3 = .7 * Math.sin(st + 3);
 
-    let bezierPatchVertices = createMeshVertices(32, 32, uvToCubicPatch,
+    let bezierPatchInfo = createMeshVertices(32, 32, uvToCubicPatch,
        toCubicPatchCoefficients(BezierBasisMatrix, [
           [
 	    -1,-1/3, 1/3, 1,
@@ -498,18 +859,18 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
     m.save();
     m.translate(0,0,-3.5);
-    drawShape([0,0,1], gl.TRIANGLE_STRIP, hermiteCurveVertices);
+    drawShape(gl.TRIANGLE_STRIP, [0,0,1], null, hermiteCurveInfo.vertices, hermiteCurveInfo.indices);
     m.restore();
 
     m.save();
     m.translate(0,0,-3);
-    drawShape([1,0,1], gl.TRIANGLE_STRIP, bezierCurveVertices);
+    drawShape(gl.TRIANGLE_STRIP, [1,0,1], null, bezierCurveInfo.vertices, bezierCurveInfo.indices);
     m.restore();
 
     m.save();
     m.translate(0,0,-4);
     m.scale(.6,.6,.6);
-    drawShape([1,1,1], gl.TRIANGLE_STRIP, bezierPatchVertices, 1);
+    drawShape(gl.TRIANGLE_STRIP, [1,1,1], 1, bezierPatchInfo.vertices, bezierPatchInfo.indices);
     m.restore();
 }
 
@@ -523,6 +884,7 @@ export default function main() {
         onStartFrame : onStartFrame,
         onEndFrame   : onEndFrame,
         onDraw       : onDraw,
+        onReload     : onReload
     };
 
     return def;
