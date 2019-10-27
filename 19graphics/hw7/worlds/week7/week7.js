@@ -687,9 +687,10 @@ async function setup(state) {
     Mat          = matrixModule.Matrix;
 
     const images = await imgutil.loadImagesPromise([
-       getPath("textures/brick.png"),
+        getPath("textures/grass_diff.png"),
        getPath("textures/polkadots.png"),
        getPath("textures/night_sky.jpg"),
+       getPath("textures/grass_norm.png"),
     ]);
 
 
@@ -882,8 +883,8 @@ async function setup(state) {
         gl.activeTexture(gl.TEXTURE0 + i);
         gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
 
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+        gl.texParameteri(gl.TEXTURE_2D, gl.CLAMP_TO_EDGE, gl.REPEAT);
+        gl.texParameteri(gl.TEXTURE_2D, gl.CLAMP_TO_EDGE, gl.REPEAT);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
@@ -917,6 +918,7 @@ function onStartFrame(t, state) {
 
     state.time = (t - tStart) / 1000;
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.clearColor(0.0, 0.4, 0.76, 1.0);
 
     // VARY TURN ANGLE AS USER DRAGS CURSOR LEFT OR RIGHT.
 
@@ -1016,34 +1018,8 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
 
 
-    let st = 3 * state.time;
-    let s0 = .7 * Math.sin(st);
-    let s1 = .7 * Math.sin(st + 1);
-    let s2 = .7 * Math.sin(st + 2);
-    let s3 = .7 * Math.sin(st + 3);
 
-    let bezierPatchInfo = createMeshVertices(32, 32, uvToCubicPatch,
-       toCubicPatchCoefficients(BezierBasisMatrix, [
-          [
-	    -1,-1/3, 1/3, 1,
-            -1,-1/3, 1/3, 1,
-            -1,-1/3, 1/3, 1,
-            -1,-1/3, 1/3, 1
-	  ],
-          [
-	    -1  ,-1  ,-1  ,-1,
-            -1/3,-1/3,-1/3,-1/3,
-             1/3, 1/3, 1/3, 1/3,
-             1  , 1  , 1  , 1
-	  ],
-          [
-	     0,   s3,   s0,  0,
-            s0,   s1,   s2, s3,
-            s0,   s1,   s2, s3,
-             0,   s0,   s3,  0
-	  ]
-       ])
-    );
+
 
     m.save();
     m.translate(0,0,-3.5);
@@ -1053,41 +1029,75 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
     m.save();
     m.translate(0,1,-3);
     m.rotateZ(state.time);
-    
+
     m.scale(2, 2, 1);
     drawShape(gl.TRIANGLE_STRIP, [1,0,1], null, bezierCurveInfo.vertices, bezierCurveInfo.indices);
     m.restore();
 
     const theta = Math.PI/2;
     const sc = 0.5;
+
+                let st = 3 * state.time;
+    let s0 = .7 * (-sin01(st + 1));
+    let s1 = .7 * (-sin01(st + 1));
+    let s2 = .7 * (-sin01(st + 1));
+    let s3 = .7 * (-sin01(st + 1));
+
+            let bezierPatchInfo = createMeshVertices(32, 32, uvToCubicPatch,
+               toCubicPatchCoefficients(BezierBasisMatrix, [
+                  [
+                -1,-1/3, 1/3, 1,
+                    -1,-1/3, 1/3, 1,
+                    -1,-1/3, 1/3, 1,
+                    -1,-1/3, 1/3, 1
+              ],
+                  [
+                -1  ,-1  ,-1  ,-1,
+                    -1/3,-1/3,-1/3,-1/3,
+                     1/3, 1/3, 1/3, 1/3,
+                     1  , 1  , 1  , 1
+              ],
+                  [
+                 0,   s3,   s0,  0,
+                    s0,   s1,   s2, s3,
+                    s0,   s1,   s2, s3,
+                     0,   s0,   s3,  0
+              ]
+               ])
+            );
+
     m.save();
-    for (let z = -20; z < 0; z += 2) {
-        for (let x = -10; x < 10; x += 1) {
+    for (let z = 0; z < 10; z += 1) {
+        for (let x = 0; x < 10; x += 1) {
             m.save();
             
-            m.translate(x * 2, -1, z + 15);
+            m.translate(2* x - 10, -1, 2 * z - 10);
 
             let sx = 1;
             let sy = 1;
             let sz = 1;
 
                 
-                if (x % 2 == 1) {
-                    console.log("odd");
+                if (z & 1) {
                     sz = -1;
-                } else if (x % 2 == 0) {
-                    console.log("even");
+                } else {
                     sz = 1;
-                }          
+                }   
 
-            m.scale(sz, 1, sz);
-            //m.rotateX(theta);
+                if (x & 1) {
+                    sx = 1;
+                } else {
+                    sx = -1;
+                }       
+
+            m.scale(sx, 1, sz);
+            m.rotateX(theta);
+
 
             drawShape(gl.TRIANGLE_STRIP, [1,1,1], 1, bezierPatchInfo.vertices, bezierPatchInfo.indices);
             
             m.restore();
         }
-        break;
     }
 
     // m.scale(sc * 1, sc * 1, 1);
