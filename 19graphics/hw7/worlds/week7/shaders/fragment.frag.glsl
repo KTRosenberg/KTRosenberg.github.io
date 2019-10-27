@@ -44,7 +44,7 @@ void main() {
     vec3 normal = normalize(vNor);
 
     vec3 color = ambient;
-    for (int i = 0 ; i < 1 ; i++) {
+    for (int i = 0 ; i < 2 ; i++) {
        float d = dot(Ldir[i], normal);
        if (d > 0.)
           color += diffuse * d * Lrgb[i];
@@ -65,7 +65,7 @@ void main() {
     // Feel free to experiment. WebGL allows you up to 8 textures at once.
 
     if (uTexIndex == 0) fragColor *= texture0;
-    if (uTexIndex == 1) fragColor *= texture0;
+    if (uTexIndex == 1) fragColor *= texture1;
     if (uTexIndex == 2) fragColor *= texture2;
 }
 

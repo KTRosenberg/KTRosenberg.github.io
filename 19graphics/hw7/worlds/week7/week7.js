@@ -464,7 +464,7 @@ let uvToCubicCurvesRibbon = (vertices, offset, u, v, arg) => {
     // IF YOU CAN'T FIGURE OUT HOW TO PRODUCE A RIBBON THAT VARIES IN Z,
     // IT IS OK TO CREATE A RIBBON WHERE ALL THE Z VALUES ARE THE SAME.
 
-    const w = 20 * arg.width;
+    const w = arg.width;
     const curve = arg.data;
     const curveCount = curve.length;
 
@@ -512,16 +512,10 @@ let uvToCubicCurvesRibbon = (vertices, offset, u, v, arg) => {
         const z1 = evalSpline(findSubT(uwhich1, slen, ue), seg0u[2]);
 
         const dz = z1 - z0;
-        x = x0 + (w * (dy - (dy * 2*v)));
-        y = y0 + (w * (dx - (dx * 2*(1 - v))));
+        // x = x0 + (w * (dy - (dy * 2*v)));
+        // y = y0 + (w * (dx - (dx * 2*(1 - v))));
 
-        // if (v == 0.0) {
-        //     x = x0 + (w * dy);
-        //     y = y0 - (w * dx);
-        // } else if (v == 1.0) {
-        //     x = x0 - (w * dy);
-        //     y = y0 + (w * dx);
-        // }
+
 
 
 
@@ -534,11 +528,22 @@ let uvToCubicCurvesRibbon = (vertices, offset, u, v, arg) => {
     // ny = 0;
     // nz = n[1];
 
-    const n = [-dz, 0, dx];
-    vec3_normalize(n, n);
+    const D = [dx, dy, dz];
+
+    const n = normalize(cross([1, 0, 0], D));
     nx = n[0];
     ny = n[1];
     nz = n[2];
+
+    
+        if (v == 0.0) {
+            x = x0 + (dy);
+            y = y0 - (dx);
+        } else if (v == 1.0) {
+            x = x0 - (dy);
+            y = y0 + (dx);
+        }
+
 
     vertices[offset]     = x;
     vertices[offset + 1] = y;
@@ -962,159 +967,261 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
 
     gl.useProgram(state.program);
 
-    gl.disable(gl.CULL_FACE);
+    
 
-    m.identity();
+    const newCode = true;
+gl.disable(gl.CULL_FACE);
+    if (newCode) {
 
-    m.translate(0,0,-4);
-    m.rotateY(state.turnAngle);
-    m.translate(0,0,4);
+        m.identity();
 
-    let by = 1;
+        m.translate(0,0,-4);
+        m.rotateY(state.turnAngle);
+        m.translate(0,0,4);
 
-    let S = .3 * Math.sin(state.time);
-    by *= S;
+        let by = 1;
 
-    let hermiteCurveInfo = createMeshVertices(48, 1, uvToCubicCurvesRibbon,
-       {
-          width: .05,
-	  data: [
-	     toCubicCurveCoefficients(HermiteBasisMatrix, [
-                [ 0, 0,-3, 3], // P0.x P1.x R0.x R1.x
-                [-1, 0, 0, 0], // P0.y P1.y R0.y R1.y
-                [ 0,.4, 0, 0]  // P0.z P1.z R0.z R1.z
-             ]),
-	     toCubicCurveCoefficients(HermiteBasisMatrix, [
-                [ 0, .5,  3,  3], // P0.x P1.x R0.x R1.x
-                [ 0,  1,  0,  0], // P0.y P1.y R0.y R1.y
-                [.5,  0,  0,  0]  // P0.z P1.z R0.z R1.z
-             ]),
-	     toCubicCurveCoefficients(HermiteBasisMatrix, [
-                [.5, .5,  2, -2], // P0.x P1.x R0.x R1.x
-                [ 1, .2,  0,  0], // P0.y P1.y R0.y R1.y
-                [ 0,  0,  0,-.5]  // P0.z P1.z R0.z R1.z
-             ])
-          ]
-       }
-    );
+        let S = .3 * Math.sin(state.time);
+        by *= S;
 
-    let bezierCurveInfo = createMeshVertices(32, 1, uvToCubicCurvesRibbon,
-       {
-          width: 0.6,
-	  data: [
-             toCubicCurveCoefficients(BezierBasisMatrix, [
-                [ -1, -.6, -.3,  0], // A.x B.x C.x D.x
-                [  0,  by, -by,  0], // A.y B.y C.y D.y
-                [-by,  .3,   0,-.1]  // A.z B.z C.z D.z
-             ]),
-             toCubicCurveCoefficients(BezierBasisMatrix, [
-                [  0, .3, -.6,  -1],    // A.x B.x C.x D.x
-                [  0, by,  -by,  0],    // A.y B.y C.y D.y
-                [-.1,0,.3,-by]     // A.z B.z C.z D.z
-             ])
-          ]
-       }
-    );
-
-
-
-
-
-
-    m.save();
-    m.translate(0,0,-3.5);
-    drawShape(gl.TRIANGLE_STRIP, [0,0,1], null, hermiteCurveInfo.vertices, hermiteCurveInfo.indices);
-    m.restore();
-
-    m.save();
-    m.translate(0,1,-3);
-    m.rotateZ(state.time);
-
-    m.scale(2, 2, 1);
-    drawShape(gl.TRIANGLE_STRIP, [1,0,1], null, bezierCurveInfo.vertices, bezierCurveInfo.indices);
-    m.restore();
-
-    const theta = Math.PI/2;
-    const sc = 0.5;
-
-                let st = 3 * state.time;
-    let s0 = .7 * (-sin01(st + 1));
-    let s1 = .7 * (-sin01(st + 1));
-    let s2 = .7 * (-sin01(st + 1));
-    let s3 = .7 * (-sin01(st + 1));
-
-            let bezierPatchInfo = createMeshVertices(32, 32, uvToCubicPatch,
-               toCubicPatchCoefficients(BezierBasisMatrix, [
-                  [
-                -1,-1/3, 1/3, 1,
-                    -1,-1/3, 1/3, 1,
-                    -1,-1/3, 1/3, 1,
-                    -1,-1/3, 1/3, 1
-              ],
-                  [
-                -1  ,-1  ,-1  ,-1,
-                    -1/3,-1/3,-1/3,-1/3,
-                     1/3, 1/3, 1/3, 1/3,
-                     1  , 1  , 1  , 1
-              ],
-                  [
-                 0,   s3,   s0,  0,
-                    s0,   s1,   s2, s3,
-                    s0,   s1,   s2, s3,
-                     0,   s0,   s3,  0
+        let hermiteCurveInfo = createMeshVertices(48, 1, uvToCubicCurvesRibbon,
+           {
+              width: .05,
+    	  data: [
+    	     toCubicCurveCoefficients(HermiteBasisMatrix, [
+                    [ 0, 0,-3, 3], // P0.x P1.x R0.x R1.x
+                    [-1, 0, 0, 0], // P0.y P1.y R0.y R1.y
+                    [ 0,.4, 0, 0]  // P0.z P1.z R0.z R1.z
+                 ]),
+    	     toCubicCurveCoefficients(HermiteBasisMatrix, [
+                    [ 0, .5,  3,  3], // P0.x P1.x R0.x R1.x
+                    [ 0,  1,  0,  0], // P0.y P1.y R0.y R1.y
+                    [.5,  0,  0,  0]  // P0.z P1.z R0.z R1.z
+                 ]),
+    	     toCubicCurveCoefficients(HermiteBasisMatrix, [
+                    [.5, .5,  2, -2], // P0.x P1.x R0.x R1.x
+                    [ 1, .2,  0,  0], // P0.y P1.y R0.y R1.y
+                    [ 0,  0,  0,-.5]  // P0.z P1.z R0.z R1.z
+                 ])
               ]
-               ])
-            );
+           }
+        );
 
-    m.save();
-    for (let z = 0; z < 10; z += 1) {
-        for (let x = 0; x < 10; x += 1) {
-            m.save();
-            
-            m.translate(2* x - 10, -1, 2 * z - 10);
+        let bezierCurveInfo = createMeshVertices(32, 1, uvToCubicCurvesRibbon,
+           {
+              width: 0.6,
+    	  data: [
+                 toCubicCurveCoefficients(BezierBasisMatrix, [
+                    [ -1, -.6, -.3,  0], // A.x B.x C.x D.x
+                    [  0,  by, -by,  0], // A.y B.y C.y D.y
+                    [-by,  .3,   0,-.1]  // A.z B.z C.z D.z
+                 ]),
+                 toCubicCurveCoefficients(BezierBasisMatrix, [
+                    [  0, .3, -.6,  -1],    // A.x B.x C.x D.x
+                    [  0, by,  -by,  0],    // A.y B.y C.y D.y
+                    [-.1,0,.3,-by]     // A.z B.z C.z D.z
+                 ])
+              ]
+           }
+        );
 
-            let sx = 1;
-            let sy = 1;
-            let sz = 1;
 
+
+
+
+
+        m.save();
+        m.translate(0,0,-3.5);
+        drawShape(gl.TRIANGLE_STRIP, [0,0,1], null, hermiteCurveInfo.vertices, hermiteCurveInfo.indices);
+        m.restore();
+
+        m.save();
+        m.translate(0,1,-3);
+        m.rotateZ(state.time);
+
+        m.scale(2, 2, 1);
+        drawShape(gl.TRIANGLE_STRIP, [1,0,1], null, bezierCurveInfo.vertices, bezierCurveInfo.indices);
+        m.restore();
+
+        const theta = Math.PI/2;
+        const sc = 0.5;
+
+                    let st = 3 * state.time;
+        let s0 = .7 * (-sin01(st + 1));
+        let s1 = .7 * (-sin01(st + 1));
+        let s2 = .7 * (-sin01(st + 1));
+        let s3 = .7 * (-sin01(st + 1));
+
+                let bezierPatchInfo = createMeshVertices(32, 32, uvToCubicPatch,
+                   toCubicPatchCoefficients(BezierBasisMatrix, [
+                      [
+                    -1,-1/3, 1/3, 1,
+                        -1,-1/3, 1/3, 1,
+                        -1,-1/3, 1/3, 1,
+                        -1,-1/3, 1/3, 1
+                  ],
+                      [
+                    -1  ,-1  ,-1  ,-1,
+                        -1/3,-1/3,-1/3,-1/3,
+                         1/3, 1/3, 1/3, 1/3,
+                         1  , 1  , 1  , 1
+                  ],
+                      [
+                     0,   s3,   s0,  0,
+                        s0,   s1,   s2, s3,
+                        s0,   s1,   s2, s3,
+                         0,   s0,   s3,  0
+                  ]
+                   ])
+                );
+
+        m.save();
+        for (let z = 0; z < 10; z += 1) {
+            for (let x = 0; x < 10; x += 1) {
+                m.save();
                 
-                if (z & 1) {
-                    sz = -1;
-                } else {
-                    sz = 1;
-                }   
+                m.translate(2* x - 10, -1, 2 * z - 10);
 
-                if (x & 1) {
-                    sx = 1;
-                } else {
-                    sx = -1;
-                }       
+                let sx = 1;
+                let sy = 1;
+                let sz = 1;
 
-            m.scale(sx, 1, sz);
-            m.rotateX(theta);
+                    
+                    if (z & 1) {
+                        sz = -1;
+                    } else {
+                        sz = 1;
+                    }   
+
+                    if (x & 1) {
+                        sx = 1;
+                    } else {
+                        sx = -1;
+                    }       
+
+                m.scale(sx, 1, sz);
+                m.rotateX(theta);
 
 
-            drawShape(gl.TRIANGLE_STRIP, [1,1,1], 1, bezierPatchInfo.vertices, bezierPatchInfo.indices);
-            
-            m.restore();
+                drawShape(gl.TRIANGLE_STRIP, [1,1,1], 0, bezierPatchInfo.vertices, bezierPatchInfo.indices);
+                
+                m.restore();
+            }
         }
-    }
 
-    // m.scale(sc * 1, sc * 1, 1);
-    // m.translate(2,0,-4);
-    // m.scale(-1, -1, 1);
-    // m.rotateX(theta);
-    // //m.rotateY(state.time);
-    // drawShape(gl.TRIANGLE_STRIP, [1,1,1], 1, bezierPatchInfo.vertices, bezierPatchInfo.indices);
-    // m.restore();
-    // m.save();
-    // m.scale(sc * 1, sc * 1, 1);
-    // m.translate(-2,0,-4);
-    // m.scale(-1, -1, 1);
-    // m.rotateX(theta);
-    // drawShape(gl.TRIANGLE_STRIP, [1,1,1], 1, bezierPatchInfo.vertices, bezierPatchInfo.indices);
-    // m.restore();
-    m.restore();
+        // m.scale(sc * 1, sc * 1, 1);
+        // m.translate(2,0,-4);
+        // m.scale(-1, -1, 1);
+        // m.rotateX(theta);
+        // //m.rotateY(state.time);
+        // drawShape(gl.TRIANGLE_STRIP, [1,1,1], 1, bezierPatchInfo.vertices, bezierPatchInfo.indices);
+        // m.restore();
+        // m.save();
+        // m.scale(sc * 1, sc * 1, 1);
+        // m.translate(-2,0,-4);
+        // m.scale(-1, -1, 1);
+        // m.rotateX(theta);
+        // drawShape(gl.TRIANGLE_STRIP, [1,1,1], 1, bezierPatchInfo.vertices, bezierPatchInfo.indices);
+        // m.restore();
+        m.restore();
+
+    } else {
+        m.identity();
+
+        m.translate(0,0,-4);
+        m.rotateY(state.turnAngle);
+        m.translate(0,0,4);
+
+        let by = 1;
+
+        let S = .3 * Math.sin(state.time);
+
+        let hermiteCurveVertices = createMeshVertices(48, 1, uvToCubicCurvesRibbon,
+           {
+              width: .05,
+          data: [
+             toCubicCurveCoefficients(HermiteBasisMatrix, [
+                    [ 0, 0,-3, 3], // P0.x P1.x R0.x R1.x
+                    [-1, 0, 0, 0], // P0.y P1.y R0.y R1.y
+                    [ 0,.4, 0, 0]  // P0.z P1.z R0.z R1.z
+                 ]),
+             toCubicCurveCoefficients(HermiteBasisMatrix, [
+                    [ 0, .5,  3,  3], // P0.x P1.x R0.x R1.x
+                    [ 0,  1,  0,  0], // P0.y P1.y R0.y R1.y
+                    [.5,  0,  0,  0]  // P0.z P1.z R0.z R1.z
+                 ]),
+             toCubicCurveCoefficients(HermiteBasisMatrix, [
+                    [.5, .5,  2, -2], // P0.x P1.x R0.x R1.x
+                    [ 1, .2,  0,  0], // P0.y P1.y R0.y R1.y
+                    [ 0,  0,  0,-.5]  // P0.z P1.z R0.z R1.z
+                 ])
+              ]
+           }
+        );
+
+        let bezierCurveVertices = createMeshVertices(32, 1, uvToCubicCurvesRibbon,
+           {
+              width: 0.06,
+          data: [
+                 toCubicCurveCoefficients(BezierBasisMatrix, [
+                    [ -1, -.6, -.3,  0], // A.x B.x C.x D.x
+                    [  0,  by, -by,  0], // A.y B.y C.y D.y
+                    [-.3,  .3,   0,-.1]  // A.z B.z C.z D.z
+                 ]),
+                 toCubicCurveCoefficients(BezierBasisMatrix, [
+                    [  0, .3, .6,  1],    // A.x B.x C.x D.x
+                    [  0, by,  0,  1],    // A.y B.y C.y D.y
+                    [-.1,-.1,-.3,-.6]     // A.z B.z C.z D.z
+                 ])
+              ]
+           }
+        );
+
+        let st = 1 // 3 * state.time;
+        let s0 = .7 * Math.sin(st);
+        let s1 = .7 * Math.sin(st + 1);
+        let s2 = .7 * Math.sin(st + 2);
+        let s3 = .7 * Math.sin(st + 3);
+
+        let bezierPatchVertices = createMeshVertices(32, 32, uvToCubicPatch,
+           toCubicPatchCoefficients(BezierBasisMatrix, [
+              [
+            -1,-1/3, 1/3, 1,
+                -1,-1/3, 1/3, 1,
+                -1,-1/3, 1/3, 1,
+                -1,-1/3, 1/3, 1
+          ],
+              [
+            -1  ,-1  ,-1  ,-1,
+                -1/3,-1/3,-1/3,-1/3,
+                 1/3, 1/3, 1/3, 1/3,
+                 1  , 1  , 1  , 1
+          ],
+              [
+             0,   s3,   s0,  0,
+                s0,   s1,   s2, s3,
+                s0,   s1,   s2, s3,
+                 0,   s0,   s3,  0
+          ]
+           ])
+        );
+
+        m.save();
+        m.translate(0,0,-3.5);
+        drawShape(gl.TRIANGLE_STRIP, [0,0,1], null, hermiteCurveVertices.vertices, hermiteCurveVertices.indices);
+        m.restore();
+
+        m.save();
+        m.translate(0,0,-3);
+        drawShape(gl.TRIANGLE_STRIP, [1,0,1], null, bezierCurveVertices.vertices, bezierCurveVertices.indices);
+        m.restore();
+
+        m.save();
+        m.translate(0,0,-4);
+        m.scale(.6,.6,.6);
+        drawShape(gl.TRIANGLE_STRIP, [1,1,1], 1, bezierPatchVertices.vertices, bezierPatchVertices.indices);
+        m.restore();
+    }
 
 }
 
