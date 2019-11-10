@@ -866,7 +866,7 @@ async function setup(state) {
     );
 
     let planeInfo = generateParametricGeometryIndexedTriangleStrip(
-        state.layoutBuilder.vertexOffset, 1000, 1000, 
+        state.layoutBuilder.vertexOffset, 256, 256, 
         ParametricTriangleStripType.Plane,
         {rangeX : [-1, 1], rangeZ : [-1, 1]}
     )
@@ -1445,12 +1445,12 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
         gl.uniform1i(state.uModeLoc, 3);
         gl.uniform1i(state.whichTextureLoc, 1);
 
-        basicDrawUsers(M, state, (M, state) => {
-            gl.uniformMatrix4fv(state.uModelLoc, false, 
-                M.matrix()
-            );
-            state.drawCube();
-        });
+        // basicDrawUsers(M, state, (M, state) => {
+        //     gl.uniformMatrix4fv(state.uModelLoc, false, 
+        //         M.matrix()
+        //     );
+        //     state.drawCube();
+        // });
 
         gl.uniform1i(state.uModeLoc, -1);
         gl.uniform4fv(state.u_ambientLoc, [1.0, 0.2, 0.2, 1.0]);
@@ -1507,15 +1507,14 @@ function onDraw(t, projMat, viewMat, state, eyeIdx) {
             gl.depthMask(false);
             M.save();
                 //Mat.rotateZ(M.matrix(), 3 * state.time);
-                Mat.translate(M.matrix(), 1, 0.4 + -1 + 0.1 * sin(state.time), -2);
-
-                const SUB = vec3_normalize(vec3_subtract(state.pos, [1, 0.4 + -1 + 0.1 * sin(state.time), -2]));
+                Mat.translate(M.matrix(), 1, 0.4 + -1 + 0.1 * sin(state.time), -1);
+                const modifiedPos = [state.pos[0], 0, state.pos[2]];
+                const SUB = vec3_normalize(vec3_subtract(modifiedPos, [1, 0, -2]));
                 Mat.rotateX(M.matrix(), π / 2);
                 Mat.rotateY(M.matrix(), 0.1 * cos(state.time + 7* π / 4));
                 Mat.rotateZ(M.matrix(), π + π / 2 + atan2(SUB[2], SUB[0]));
 
-
-                Mat.scale(M.matrix(), 1.2, 1.2, 1.2);
+                Mat.scale(M.matrix(), 1.2 * 0.5, 1.2 * 0.5, 1.2 * 0.5);
                 gl.uniformMatrix4fv(state.uModelLoc, false, 
                     M.matrix()
                 );

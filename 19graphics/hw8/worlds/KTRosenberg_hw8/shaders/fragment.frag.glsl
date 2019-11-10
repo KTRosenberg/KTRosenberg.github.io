@@ -136,7 +136,7 @@ color0 = vec4(vec3(0.0), 0.0);
               fragColor = vec4(mix(
                   texture(uTex0, uv_coord), 
                   texture(uTex1, uv_coord), 
-                  sin(uTime)
+                  sin01(uTime)
                ));
         //} else {
         //    fragColor = vec4(vec3(0.0), 1.0);

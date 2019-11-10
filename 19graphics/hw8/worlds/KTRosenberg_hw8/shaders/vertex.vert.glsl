@@ -99,7 +99,7 @@ void main() {
       float dx = vapos.x - pos.x;
       float dz = vapos.y - pos.y;
       //if ((dx*dx) + (dz*dz) > 10.0) {
-          modified_pos.y += min(4.0, 0.7 * distance(pos, vapos));
+          modified_pos.y += min(4.0, 4.0 * distance(pos, vapos));
           modified_pos.y -= 4.0 - 0.2 * (noise(vapos.xxy - sin(uTime)) * cos(vapos.y + uTime) + cos(vapos.x + uTime) + sin(vapos.y + uTime));
       //}
 
