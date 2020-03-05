@@ -193,21 +193,19 @@
 
     // object types ////////////////////////////////////////////////////////////
 
-    // laser projectile
+    // laser Laser
     
     let count = 0;
-    function drawProjectile(g, projectile, dt) {
+    function drawLaser(g, Laser, dt) {
         // outer shape
-
         /*
-        g.fillRect(projectile.x - (projectile.width / 2), 
-                   projectile.y - (projectile.height / 2),  
-                   projectile.width, projectile.height);
+        g.fillRect(Laser.x - (Laser.width / 2), 
+                   Laser.y - (Laser.height / 2),  
+                   Laser.width, Laser.height);
         */
-        g.translate(projectile.x, projectile.y);
         let rotation = 0;
 
-        switch (projectile.orient) {
+        switch (Laser.orient) {
         case Orientation.up:
             rotation = 0;
             break;
@@ -221,40 +219,51 @@
             rotation = Math.PI / 2;
             break;
         }
-        
-g.rotate(rotation);
         g.save();
-        g.scale(0.7, 0.7);
-        g.fillStyle = "rgba(255, 0, 0, 0.9)";
-        g.fillRect(-(projectile.width / 2), -(projectile.height / 2),  
-                   projectile.width, projectile.height * 1.4);
+            g.translate(Laser.x, Laser.y)
+            g.rotate(rotation);
+            // inner shape
+
+
+            const tx = Laser.tailPosition[0];
+            const ty = Laser.tailPosition[1];
+            const px = Laser.x;
+            const py = Laser.y;
+            const dist = Math.max(Math.abs(px - tx), Math.abs(py - ty));
+            g.save();
+                // g.translate(-tx, -ty);
+                // g.fillStyle = "rgba(255, 0, 0, 0.7)";
+                // g.fillRect(
+                //     tx - (Laser.width / 2), ty - (Laser.width / 2),
+                //     Laser.width, dist
+                // );
+                // g.translate(tx, ty);      
+
+                g.translate(-px, -py);
+                g.fillStyle = "rgba(255, 0, 0, 0.7)";
+                g.fillRect(
+                    px - (Laser.width / 2), py - (Laser.width / 2),  
+                    Laser.width, dist
+                );
+
+                g.fillStyle = "yellow";
+                g.fillRect(
+                    px - (Laser.width / 2), py - (Laser.width / 2),
+                    Laser.width, Laser.width
+                );
+                g.translate(px, py);
+
+            g.restore();;
+
         g.restore();
-
-        // rotation = (count) * (Math.PI / 180);
-        // if (count >= 360) {
-        //     count = 0;
-        // }
-
-        // g.rotate(rotation);
-        // g.fillRect(-(projectile.width / 2), -(projectile.height / 4),  
-        //            projectile.width, projectile.height);
-        // g.rotate(-rotation);
-
-        // inner shape
-        g.fillStyle = "yellow";
-        g.translate(0, -projectile.height / 4);
-        g.save();
-        g.scale(0.7, 0.7);
-        g.fillRect(-(projectile.width / 4), -(projectile.height / 16),  
-           projectile.width / 2, projectile.height / 2);         
-        g.restore();
-        g.fillRect(-projectile.width/2, -projectile.width/2, projectile.width, projectile.width)
         
-        g.setTransform(1, 0, 0, 1, 0, 0);
+        //g.fillRect(-Laser.width/2, -Laser.width/2, Laser.width, Laser.width)
+        
+
         
         /*
         g.fillStyle = "rgba(255, 0, 0, 10)";
-        switch (projectile.orient) {
+        switch (Laser.orient) {
         case Orientation.up:
             break;
         case Orientation.down:
@@ -264,21 +273,21 @@ g.rotate(rotation);
         case Orientation.right:
             break;
         }
-        g.fillRect(projectile.x - (projectile.width / 2),
-            projectile.y - (projectile.height / 2), 
-            projectile.width, projectile.height * 4);
+        g.fillRect(Laser.x - (Laser.width / 2),
+            Laser.y - (Laser.height / 2), 
+            Laser.width, Laser.height * 4);
         */
         
         count += 20 * 60 * dt;
     }
     
-    // move a projectile
-    function translateProjectileBy(x, y, doWrapScreen) {
+    // move a Laser
+    function translateLaserBy(x, y, doWrapScreen) {
         this.x += x;
         this.y += y;
         if (false) {
             if (this.x > worldDimensions[0]) {
-                this.x = Projectile.defaultSpeed;
+                this.x = Laser.defaultSpeed;
             }
             else if (this.x < 0) {
                 this.x = 990;
@@ -292,26 +301,34 @@ g.rotate(rotation);
         }
     }
     
-    // create the laser projectile
-    function Projectile(x, y, width, height, speed) {
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-        this.distPer = speed;
-        this.orient = Orientation.up;
-        this.translateProjectileBy = translateProjectileBy;
+    // create the laser Laser
+    class Laser {
+        constructor(x, y, width, height, speed) {
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+            this.distPer = speed;
+            this.orient = Orientation.up;
+            this.translateLaserBy = translateLaserBy;
+            this.tailPosition = [
+                worldDimensions[0] / 2,
+                worldDimensions[1] - 20
+            ];
+        }
     }
-
     
     canvas1.resetLaserPosition = function(laser, dt) {
         laser.x = worldDimensions[0] / 2;
         laser.y = worldDimensions[1] - 20;
-        laser.orient = Orientation.up;        
+        laser.orient = Orientation.up;
+
+        laser.tailPosition[0] = worldDimensions[0] / 2;
+        laser.tailPosition[1] = worldDimensions[1] - 20; 
     }
 
     
-    // laser projectile object
+    // laser Laser object
     let laser = null;
     
     // background graphic
@@ -333,9 +350,11 @@ g.rotate(rotation);
         90 : 600
     };
 
-    function Mirror(x, y) {
-        this.x = x;
-        this.y = y;
+    class Mirror {
+        constructor (x, y) {
+            this.x = x;
+            this.y = y;
+        }
     }
     Mirror.orient = Orientation.up;
     
@@ -375,10 +394,10 @@ g.rotate(rotation);
     
     };
     */
-    let projectileLive = false;
-    function handleProjectileAndMirrorCollision(laser) {
+    let LaserLive = false;
+    function handleLaserAndMirrorCollision(laser) {
         let nextLaserOrient = laser.orient;
-        projectileLive = true;
+        LaserLive = true;
         switch (laser.orient) {
         case Orientation.up:
             if (Mirror.orient == Orientation.up
@@ -390,7 +409,7 @@ g.rotate(rotation);
                 nextLaserOrient = Orientation.up;
                 // respawn at game starting point, laser has been absorbed
                 canvas1.resetLaserPosition(laser);
-                projectileLive = false;
+                LaserLive = false;
             }
             else if (Mirror.orient == Orientation.upRight
                      || Mirror.orient == Orientation.downLeft) {
@@ -411,7 +430,7 @@ g.rotate(rotation);
                 nextLaserOrient = Orientation.up;
                 // respawn at game starting point, laser has been absorbed
                 canvas1.resetLaserPosition(laser);
-                projectileLive = false;
+                LaserLive = false;
             }
             else if (Mirror.orient == Orientation.upRight
                      || Mirror.orient == Orientation.downLeft) {
@@ -427,7 +446,7 @@ g.rotate(rotation);
                 || Mirror.orient == Orientation.down) {
                     // respawn at game starting point, laser has been absorbed
                 canvas1.resetLaserPosition(laser);
-                projectileLive = false;
+                LaserLive = false;
             }
             else if (Mirror.orient == Orientation.left
                      || Mirror.orient == Orientation.right) {
@@ -447,7 +466,7 @@ g.rotate(rotation);
                 || Mirror.orient == Orientation.down) {
                     // respawn at game starting point, laser has been absorbed
                 canvas1.resetLaserPosition(laser);
-                projectileLive = false;
+                LaserLive = false;
             }
             else if (Mirror.orient == Orientation.left
                      || Mirror.orient == Orientation.right) {
@@ -482,7 +501,7 @@ g.rotate(rotation);
         collisionOccurred : false
     };
     canvas1.Init = function() {
-        laser = new Projectile(
+        laser = new Laser(
             worldDimensions[0] / 2, worldDimensions[1] - 20, 
             20, 100, 11 * 60
         );
@@ -520,7 +539,6 @@ g.rotate(rotation);
         audio.sfx.mirrorMove.data    = new Audio("./audio/mirror_adjust.mp3");
         audio.sfx.mirrorReflect.data = new Audio("./audio/reflect.m4a");
     }
-    
     canvas1.update = function(t, dt, g) {      
 		if (!window.initResourcesReady) {
             return;
@@ -548,7 +566,7 @@ g.rotate(rotation);
             dx = laser.distPer * dt; 
             break;
         } 
-        laser.translateProjectileBy(dx, dy, false);
+        laser.translateLaserBy(dx, dy, false);
         
         // check collision with mirrors 
         //(very simple collision possible
@@ -575,9 +593,11 @@ g.rotate(rotation);
         
         let nextLaserOrient = laser.orient;      
         if (collisionOccurred) {
-            const orient = handleProjectileAndMirrorCollision(laser);
-            if (projectileLive) {
+            const orient = handleLaserAndMirrorCollision(laser);
+            if (LaserLive) {
                 laser.orient = orient;
+                laser.tailPosition[0] = laser.x;
+                laser.tailPosition[1] = laser.y;
             } 
         }
         
@@ -670,7 +690,7 @@ g.rotate(rotation);
             return;
         }
                 
-        drawProjectile(g, laser, dt);
+        drawLaser(g, laser, dt);
 
         renderTransformEnd(g);
 	}
