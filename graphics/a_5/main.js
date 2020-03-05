@@ -43,6 +43,11 @@
     let curControl = Orientation.up;
     let changeControl;
     
+    function playOneShotSFX(key) {
+        audio.sfx[key].data.pause();  
+        audio.sfx[key].data.currentTime = 0;
+        audio.sfx[key].data.play();        
+    }
     function keyDownHandler(event) {
         if (event.defaultPrevented) {
             return;
@@ -50,34 +55,42 @@
         changeControl = true;
         // up
         if (event.keyCode == Orientation.up) {
+                    playOneShotSFX("mirrorMove");
             up = true;
         }
         // down
         else if (event.keyCode == Orientation.down) {
+                    playOneShotSFX("mirrorMove");
             down = true;
         }
         // left
         else if (event.keyCode == Orientation.left) {
+                    playOneShotSFX("mirrorMove");
             left = true;
         }
         // right
         else if (event.keyCode == Orientation.right) {
+                    playOneShotSFX("mirrorMove");
             right = true;
         }
         // diagonal up right
         else if (event.keyCode == Orientation.upRight) {
+                    playOneShotSFX("mirrorMove");
             upRight = true;
         }
         // diagonal down left
         else if (event.keyCode == Orientation.downLeft) {
+                    playOneShotSFX("mirrorMove");
             upRight = true;
         }
         // diagonal up left
         else if (event.keyCode == Orientation.upLeft) {
+                    playOneShotSFX("mirrorMove");
             upLeft = true;
         }
         // diagonal down right
         else if (event.keyCode == Orientation.downRight) {
+                    playOneShotSFX("mirrorMove");
             downRight = true;
         }
         else {
@@ -90,6 +103,8 @@
         if (changeControl) {
             curControl = event.keyCode;
         }
+
+
     }
 
     function keyUpHandler(event) {
@@ -170,6 +185,12 @@
         }
     }
 
+    window.addEventListener("gamepadconnected", function(e) {
+        console.log("Gamepad connected at index %d: %s. %d buttons, %d axes.",
+        e.gamepad.index, e.gamepad.id,
+        e.gamepad.buttons.length, e.gamepad.axes.length);
+    });
+
     // object types ////////////////////////////////////////////////////////////
 
     // laser projectile
@@ -178,7 +199,6 @@
     function drawProjectile(g, projectile, dt) {
         // outer shape
 
-        g.fillStyle = "rgba(255, 0, 0, 0.9)";
         /*
         g.fillRect(projectile.x - (projectile.width / 2), 
                    projectile.y - (projectile.height / 2),  
@@ -202,12 +222,12 @@
             break;
         }
         
-
-        g.rotate(rotation);
+g.rotate(rotation);
         g.save();
         g.scale(0.7, 0.7);
+        g.fillStyle = "rgba(255, 0, 0, 0.9)";
         g.fillRect(-(projectile.width / 2), -(projectile.height / 2),  
-                   projectile.width, projectile.height);
+                   projectile.width, projectile.height * 1.4);
         g.restore();
 
         // rotation = (count) * (Math.PI / 180);
@@ -228,6 +248,8 @@
         g.fillRect(-(projectile.width / 4), -(projectile.height / 16),  
            projectile.width / 2, projectile.height / 2);         
         g.restore();
+        g.fillRect(-projectile.width/2, -projectile.width/2, projectile.width, projectile.width)
+        
         g.setTransform(1, 0, 0, 1, 0, 0);
         
         /*
@@ -322,6 +344,11 @@
         [null, null, null], 
         [null,       null]
     ];
+
+    const mapDims = [5, 5]
+    let map = [];
+
+
     
     function drawMirrors(g, mirrors, orient) {                              
         for (let i = 0; i < mirrors.length; ++i) {
@@ -446,11 +473,20 @@
     		theme : {on : false, data : false}
     	},
     	sfx : {
-    		onLose : { data : null }
+    		onLose        : {data : null},
+            mirrorMove    : {data : null},
+            mirrorReflect : {data : null},
     	}
     };
+    const frameData = {
+        collisionOccurred : false
+    };
     canvas1.Init = function() {
-        laser = new Projectile(worldDimensions[0] / 2, worldDimensions[1] - 20, 20, 100, 14 * 60);
+        laser = new Projectile(
+            worldDimensions[0] / 2, worldDimensions[1] - 20, 
+            20, 100, 11 * 60
+        );
+
         currentState = GameState.pre;
         
         // initialize mirrors
@@ -461,15 +497,28 @@
         }
         mirrors[2][0] = new Mirror(100, 900);
         mirrors[2][1] = new Mirror(900, 900);
+
+        for (let i = 0; i < mapDims[0]; i += 1) {
+            const row = [];
+            map.push(row)
+            for (let j = 0; j < mapDims[1]; j += 1) {
+                row.push({
+                    point : null
+                });
+            }
+        }
         
         bg = document.getElementById("bg");
         
         // get mirror sprite sheet
         mirror_sprites = document.getElementById("mirror_sprites");
 
-        audio.music.theme = new Audio("./theme.wav");
-        audio.music.theme.loop = true;
-        
+        audio.music.theme.data = new Audio("./audio/theme.wav");
+        audio.music.theme.data.loop = true;
+
+        audio.sfx.onLose.data        = new Audio("./audio/on_lose.wav");
+        audio.sfx.mirrorMove.data    = new Audio("./audio/mirror_adjust.mp3");
+        audio.sfx.mirrorReflect.data = new Audio("./audio/reflect.m4a");
     }
     
     canvas1.update = function(t, dt, g) {      
@@ -479,7 +528,7 @@
 
         if (!audio.isInit) {
             audio.music.theme.on = true;
-            audio.music.theme.play();
+            audio.music.theme.data.play();
             audio.isInit = true;
         }
 
@@ -520,6 +569,7 @@
                 }                
             }
         }
+        frameData.collisionOccurred = collisionOccurred;
                         
         Mirror.orient = curControl;
         
@@ -528,7 +578,7 @@
             const orient = handleProjectileAndMirrorCollision(laser);
             if (projectileLive) {
                 laser.orient = orient;
-            }
+            } 
         }
         
         /*
