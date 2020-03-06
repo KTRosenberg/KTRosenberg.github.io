@@ -26,7 +26,8 @@
 
     const Input = {
         buttonsState : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        buttonsToggle : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+        buttonsToggle : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        axes : []
     };
     const ds4mapping = {
         0 : "x",
@@ -118,7 +119,40 @@
         }
         sfx.data.play();        
     }
-    function dpadHandler() {
+
+    const TAU = Math.PI * 2;
+
+    const analogueToDirection = [
+        Orientation.right, 
+        Orientation.upRight,
+        Orientation.up,
+        Orientation.upLeft,
+        Orientation.left,
+        Orientation.downLeft,
+        Orientation.down
+    ];
+    function handleAnalogueStick() {
+        const axes = Input.axes;
+
+        const lxraw = axes[0];
+        const lyraw = axes[1];
+
+        if (Math.abs(lxraw) < 0.45 && 
+            Math.abs(lyraw) < 0.45) {
+            return;
+        }
+
+        let angle = Math.atan2(-lyraw, lxraw);
+        angle += TAU / 16;
+        if (angle < 0) {
+            angle += TAU;
+        }
+        angle /= (TAU / 8);
+
+        curControl = analogueToDirection[Math.floor(angle)]
+    }
+
+    function handleDPad() {
         const justReleasedLeft  = justReleasedByKey("dpadleft");
         const justReleasedRight = justReleasedByKey("dpadright");
         const justReleasedUp    = justReleasedByKey("dpadup");
@@ -176,9 +210,7 @@
             right = true;
             curControl = Orientation.right;
         }
-        if (curControl != oldControl) {
-            playOneShotSFX("mirrorMove");
-        }
+        playOneShotSFX("mirrorMove");
     }
     function keyDownHandler(event) {
         if (event.defaultPrevented) {
@@ -320,6 +352,7 @@
 ////////
 var haveEvents = 'ongamepadconnected' in window;
 var controllers = {};
+let activeGamepad = null;
 
 function connecthandler(e) {
   addgamepad(e.gamepad);
@@ -327,50 +360,9 @@ function connecthandler(e) {
 
 function addgamepad(gamepad) {
   controllers[gamepad.index] = gamepad;
+  // hack!
+  activeGamepad = gamepad;
   window.initResourcesReady = true;
-  console.log(gamepad)
-  //var d = document.createElement("div");
-  //d.setAttribute("id", "controller" + gamepad.index);
-
-  //var t = document.createElement("h1");
-  //t.appendChild(document.createTextNode("gamepad: " + gamepad.id));
-  //d.appendChild(t);
-
-  //var b = document.createElement("div");
-  //b.className = "buttons";
-  //for (var i = 0; i < gamepad.buttons.length; i++) {
-    //var e = document.createElement("span");
-    //e.className = "button";
-    //e.id = "b" + i;
-    //e.innerHTML = i;
-    //b.appendChild(e);
-  //}
-
-  //d.appendChild(b);
-
-  //var a = document.createElement("div");
-  //a.className = "axes";
-
-  //for (var i = 0; i < gamepad.axes.length; i++) {
-    //var p = document.createElement("progress");
-    //p.className = "axis";
-    //p.id = "a" + i;
-    //p.setAttribute("max", "2");
-    //p.setAttribute("value", "1");
-    //p.innerHTML = i;
-    //a.appendChild(p);
-  //}
-
-  //d.appendChild(a);
-
-  // See https://github.com/luser/gamepadtest/blob/master/index.html
-  //var start = document.getElementById("start");
-  //if (start) {
-  //  start.style.display = "none";
-  //}
-
-  //document.body.appendChild(d);
-  //requestAnimationFrame(updateStatus);
 }
 
 function disconnecthandler(e) {
@@ -424,11 +416,8 @@ function pollControllerStatus() {
     }
 
     //var axes = d.getElementsByClassName("axis");
-    for (i = 0; i < controller.axes.length; i++) {
-      //var a = axes[i];
-      //a.innerHTML = i + ": " + controller.axes[i].toFixed(4);
-      //a.setAttribute("value", controller.axes[i] + 1);
-    }
+    Input.axes = controller.axes;
+    Input.vibrationActuator = controller.vibrationActuator;
   }
   //requestAnimationFrame(updateStatus);
 }
@@ -589,7 +578,7 @@ if (!haveEvents) {
     
     canvas1.resetLaserPosition = function(laser, dt) {
         laser.x = worldDimensions[0] / 2;
-        laser.y = worldDimensions[1];
+        laser.y = worldDimensions[1] + 10;
         laser.orient = Orientation.up;
 
         laser.tailPosition[0] = worldDimensions[0] / 2;
@@ -769,6 +758,10 @@ if (!haveEvents) {
     const frameData = {
         collisionOccurred : false
     };
+
+    let respawnDelay = 0;
+    let respawnDelayMax = .2;
+
     canvas1.Init = function() {
         laser = new Laser(
             worldDimensions[0] / 2, worldDimensions[1], 
@@ -820,8 +813,10 @@ if (!haveEvents) {
         }
         audio.sfx.mirrorMove.isRoundRobin = true;
         audio.sfx.mirrorReflect.data = new Audio("./audio/reflect.m4a");
+
+        console.log("INIT")
     }
-    canvas1.startFrame = function() {
+    canvas1.startFrame = function(t, dt) {
         if (!window.initResourcesReady) {
             scangamepads();
             return;
@@ -833,12 +828,25 @@ if (!haveEvents) {
             audio.isInit = true;
         }
 
-        pollControllerStatus();
-        dpadHandler();
+        if (respawnDelay > 0) {
+            respawnDelay = Math.max(0, respawnDelay - dt)
+            if (respawnDelay > 0) {
+                return;
+            }
+        }
 
+        if (activeGamepad) {
+            pollControllerStatus();
+            handleDPad();
+            handleAnalogueStick();
+        }
 
-        if (currentState == GameState.pre && (this.cursor.z == 1) || justPressedByKey("start")) {
+        if (currentState == GameState.pre && ((this.cursor.z == 1) || justPressedByKey("start"))) {
             currentState = GameState.running;
+        }
+
+        if (currentState != GameState.running) {
+            return;
         }
 
         if (justPressedByKey("pause") && toggle("pause")) {
@@ -850,8 +858,26 @@ if (!haveEvents) {
         }
     };
 
+    function vibrateController() {
+        return;
+        Input.vibrationActuator.playEffect("dual-rumble", {
+            duration        : 100,
+            strongMagnitude : 0.25,
+            weakMagnitude   : 0.25
+        });
+    }
+
+    window.addEventListener("unload", () => {
+        if (Input.vibrationActuator) { 
+            Input.vibrationActuator.reset();      
+        }
+    }, 
+    false);
+
     canvas1.update = function(t, dt, g) {
-        if (!window.initResourcesReady) {
+        if (!window.initResourcesReady || 
+            currentState != GameState.running || 
+            respawnDelay > 0) {
             return; 
         }
 
@@ -900,10 +926,13 @@ if (!haveEvents) {
         if (collisionOccurred) {
             const orient = handleLaserAndMirrorCollision(laser);
             if (LaserLive) {
-                laser.orient = orient;
+                laser.orient          = orient;
                 laser.tailPosition[0] = laser.x;
                 laser.tailPosition[1] = laser.y;
-            } 
+            }  else {
+                vibrateController();
+                respawnDelay = respawnDelayMax;
+            }
         }
         
         /*
@@ -927,6 +956,8 @@ if (!haveEvents) {
             || laser.y < -laser.height || laser.y > worldDimensions[1] + laser.height) {
             // respawn at game starting point
             canvas1.resetLaserPosition(laser);
+            vibrateController();
+            respawnDelay = respawnDelayMax;
         }
        
     }

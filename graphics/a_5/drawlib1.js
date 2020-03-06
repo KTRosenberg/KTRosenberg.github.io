@@ -34,7 +34,7 @@
             if ((canvas = canvases[i]).update) {
                context = canvas.getContext('2d');
 
-               canvas.startFrame();
+               canvas.startFrame(t, dt);
 
                accumulate += (t - timePrev);
                timePrev = t;
