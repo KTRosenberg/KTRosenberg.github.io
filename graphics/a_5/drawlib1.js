@@ -28,16 +28,16 @@
         requestAnimationFrame(frame);
 
          var i, canvas, context;
-         
          time = t / 1000.0;
 
-         for (i = 0 ; i < canvases.length ; i++)
+         for (i = 0; i < canvases.length; i++)
             if ((canvas = canvases[i]).update) {
                context = canvas.getContext('2d');
 
+               canvas.startFrame();
+
                accumulate += (t - timePrev);
                timePrev = t;
-
                while (accumulate >= interval) {
                    accumulate -= interval;
                    canvas.update(t, dt, context);
@@ -52,11 +52,11 @@
       canvas.cursor = {x:0, y:0, z:0};
       canvas.setCursor = function(x, y, z) {
          var r = this.getBoundingClientRect();
-	 this.cursor.x = x - r.left;
-	 this.cursor.y = y - r.top;
-	 if (z !== undefined)
-	    this.cursor.z = z;
-      }
+	       this.cursor.x = x - r.left;
+	       this.cursor.y = y - r.top;
+  	    if (z !== undefined)
+  	       this.cursor.z = z;
+        }
       canvas.onmousedown = function(e) { 
         window.initResourcesReady = true;
         this.setCursor(e.clientX, e.clientY, 1); 
