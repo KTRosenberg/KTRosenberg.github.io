@@ -13,7 +13,7 @@
 
    function draw2DCanvases(canvases) {
       if (!gameIsSet) {
-          canvas1.Init(dt);
+          canvas1.init(dt);
           gameIsSet = true;
       }
       for (var i = 0 ; i < canvases.length ; i++)
@@ -30,20 +30,21 @@
          var i, canvas, context;
          time = t / 1000.0;
 
+
          for (i = 0; i < canvases.length; i++)
             if ((canvas = canvases[i]).update) {
                context = canvas.getContext('2d');
 
-               canvas.startFrame(t, dt);
+               canvas.startFrame(time, dt);
 
                accumulate += (t - timePrev);
                timePrev = t;
                while (accumulate >= interval) {
                    accumulate -= interval;
-                   canvas.update(t, dt, context);
+                   canvas.update(time, dt, context);
                }
 
-               canvas.render(dt, context);
+               canvas.render(time, dt, context);
             }
        }
        requestAnimationFrame(frame);

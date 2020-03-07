@@ -1,7 +1,13 @@
 "use strict";
 
 	const worldDimensions = [1000, 1000];
-	let currScale = [900, 1000];
+    const worldXSlots = 5;
+    const worldYSlots = 5;
+    const worldGridSizeX = worldDimensions[0] / worldXSlots
+    const worldGridSizeXHalf = worldGridSizeX / 2;
+    const worldGridSizeY = worldDimensions[1] / worldYSlots; 
+    const worldGridSizeYHalf = worldGridSizeY / 2;
+	let currScale = [900, 900];
 
 	function scale(val, scale, scaleBase) {
 		return val * (scale / scaleBase); 
@@ -10,7 +16,8 @@
     let GameState = {
         pre     : 0,
         running : 1,
-        end     : 2 
+        end     : 2,
+        time 
     }
     // user input //////////////////////////////////////////////////////////////
     // control states
@@ -108,7 +115,8 @@
     let curControl = Orientation.up;
     let changeControl;
     
-    function playOneShotSFX(key) { 
+    function playOneShotSFX(key) {
+        return;
         audio.sfx[key].data.currentTime = 0;
         const sfx = audio.sfx[key];
         if (sfx.isRoundRobin) {
@@ -137,8 +145,8 @@
         const lxraw = axes[0];
         const lyraw = axes[1];
 
-        if (Math.abs(lxraw) < 0.45 && 
-            Math.abs(lyraw) < 0.45) {
+        if (Math.abs(lxraw) < 0.44 && 
+            Math.abs(lyraw) < 0.44) {
             return;
         }
 
@@ -149,7 +157,8 @@
         }
         angle /= (TAU / 8);
 
-        curControl = analogueToDirection[Math.floor(angle)]
+        const idx =  Math.min(TAU, Math.max(0, Math.floor(angle)));
+        curControl = analogueToDirection[idx];
     }
 
     function handleDPad() {
@@ -454,7 +463,7 @@ if (!haveEvents) {
     // laser Laser
     
     let count = 0;
-    function drawLaser(g, Laser, dt) {
+    function drawLaser(g, Laser, t, dt) {
         // outer shape
         /*
         g.fillRect(Laser.x - (Laser.width / 2), 
@@ -575,6 +584,7 @@ if (!haveEvents) {
             ];
         }
     }
+    Laser.defaultSpeed = 9 * 60;
     
     canvas1.resetLaserPosition = function(laser, dt) {
         laser.x = worldDimensions[0] / 2;
@@ -756,19 +766,201 @@ if (!haveEvents) {
     	}
     };
     const frameData = {
-        collisionOccurred : false
+        mirrorCollisionOccurred : false
     };
 
     let respawnDelay = 0;
     let respawnDelayMax = .2;
 
-    canvas1.Init = function() {
+    
+    const Score = {
+        multiplier : Laser.defaultSpeed / 60,
+        count : 0 
+    }
+
+    function handleMapCollision() {
+        const x = laser.x;// / worldGridSizeX; // (thing.coords[0] * worldGridSizeX) + worldGridSizeXHalf;
+        const y = laser.y;// / worldGridSizeY; // (thing.coords[1] * worldGridSizeY) + worldGridSizeYHalf; 
+        const gridJ = Math.floor(laser.x / worldGridSizeX);
+        const gridI = Math.floor(laser.y / worldGridSizeY);
+
+        if (gridJ < 0 || gridI < 0 || 
+            gridI >= mapDims[1] || gridJ >= mapDims[0]) 
+        {
+            return;
+        }
+
+        const thing = map[gridI][gridJ][0];
+        
+        if (!thing.isActive) {
+            return;
+        }
+
+        const thingY = (thing.coords[0] * worldGridSizeX) + worldGridSizeXHalf;
+        const thingX = (thing.coords[1] * worldGridSizeY) + worldGridSizeYHalf;
+        const dx = thingX - x;
+        const dy = thingY - y;
+
+        if ((dx * dx) + (dy * dy) > 30) {
+            return;
+        }
+        ScorePointCollect(thing.data);
+    }
+
+    let activeScorePoints = 0;
+    let maxActiveScorePoints = 3;
+    function ScorePointMake(i, j) {
+        map[i][j][0].isActive = true;
+        map[i][j][0].data = new ScorePoint(map[i][j][0]);
+        ScorePoint.prevCollectTime = GameState.time;
+        activeScorePoints += 1;
+    }
+
+    function randomNumber(min, max) {  
+        return Math.floor(Math.random() * (max - min) + min); 
+    }  
+  
+
+    const validSlots = [
+        [0, 1],
+        [0, 3],
+
+        [1, 0],
+        [1, 2],
+        [1, 4],
+
+        [2, 1],
+        [2, 3],
+
+        [3, 0],
+        [3, 4],
+
+        [4, 1],
+        [4, 2],
+        [4, 3]
+    ];
+
+    function advanceRound(prevScorePoint) {
+        const count = randomNumber(1, 3);
+
+        for (let i = 0; i < count && activeScorePoints < maxActiveScorePoints; i += 1) {
+            const slotIdx = randomNumber(0, validSlots.length);
+            if (map[validSlots[slotIdx][0]][validSlots[slotIdx][1]][0].isActive) {
+                continue;
+            }
+
+            ScorePointMake(validSlots[slotIdx][0], validSlots[slotIdx][1]);
+        }
+    }
+    function ScorePointCollect(sp) {
+        sp.base.isActive = false;
+        ScorePoint.prevCollectTime = GameState.time;
+        Score.count += sp.value * Math.max(0, (2 / (1 + (GameState.time - ScorePoint.prevCollectTime))));
+        console.log(Score.multiplier);
+        Score.multiplier = Math.min(12, Score.multiplier + 1);
+        console.log(Score.multiplier);
+        laser.distPer = Score.multiplier * 60;
+        activeScorePoints -= 1;
+
+        advanceRound(sp);
+        
+    }
+    function ScorePointDraw(g, x, y, t, dt) {
+        g.save();
+        g.fillStyle = "violet";
+        g.translate(x, y);
+        const sin01 = (Math.sin(t) + 1.0) / 2.0;
+        g.scale(1 + sin01, 1 + sin01);
+        g.translate(-x, -y);
+        g.beginPath();
+        g.arc(x, y, 20, 0, TAU);
+        g.fill();
+
+        g.restore();
+
+        g.fillStyle = "blue";
+
+        const rotation = t;
+
+        g.save();
+        g.translate(x, y);
+        g.rotate(rotation);
+        g.scale(1.5, 1.5);
+        g.translate(-x, -y);
+        
+        g.fillRect(x - 15, y - 15,  
+                   30, 30);
+        g.restore();
+        
+
+        g.save();
+        // inner shape
+        g.fillStyle = "yellow";
+        g.translate(x, y);
+        g.rotate(rotation * 2);
+        g.scale(1.5, 1.5);
+        g.translate(-x, -y);
+        
+        g.fillRect(x - 5, y - 5,  
+                    10, 10);
+          
+
+        g.restore();
+    }
+
+    function renderThings(g, t, dt) {
+        let scoreFound = false;
+        for (let i = 0; i < mapDims[0]; i += 1) {
+            for (let j = 0; j < mapDims[1]; j += 1) {
+                const thingSlot = map[i][j];
+                for (let sid = 0; sid < thingSlot.length; sid += 1) {
+                    const thing = thingSlot[sid];
+                    if (!thing.isActive) {
+                        continue;
+                    }
+
+                    const y = (thing.coords[0] * worldGridSizeX) + worldGridSizeXHalf;
+                    const x = (thing.coords[1] * worldGridSizeY) + worldGridSizeYHalf;
+
+                    switch (thing.data.thingType) {
+                    case THING_TYPE.SCORE_POINT: {
+                        scoreFound = true;
+                        //console.log(x, y)
+                        //console.log(thing.coords)
+                        ScorePointDraw(g, x, y, t, dt);
+
+                        break;
+                    }
+                    }
+                }
+
+            }
+        }
+        if (!scoreFound) {
+            console.log(map);
+        }
+    }
+
+    canvas1.init = function() {
         laser = new Laser(
             worldDimensions[0] / 2, worldDimensions[1], 
-            20, 100, 11 * 60
+            20, 100, 9 * 60
         );
 
         currentState = GameState.pre;
+
+        for (let i = 0; i < mapDims[0]; i += 1) {
+            const row = [];
+            map.push(row);
+            for (let j = 0; j < mapDims[1]; j += 1) {
+                const col = [];
+                row.push(col);
+                for (let thing = 0; thing < 10; thing += 1) {
+                    col.push(new Thing(i, j));
+                }
+            }
+        }
+        ScorePointMake(1, 2);
         
         // initialize mirrors
         for (let i = 0, py = 100; py < 900; ++i, py += 400) { 
@@ -779,15 +971,6 @@ if (!haveEvents) {
         mirrors[2][0] = new Mirror(100, 900);
         mirrors[2][1] = new Mirror(900, 900);
 
-        for (let i = 0; i < mapDims[0]; i += 1) {
-            const row = [];
-            map.push(row)
-            for (let j = 0; j < mapDims[1]; j += 1) {
-                row.push({
-                    point : null
-                });
-            }
-        }
         
         bg = document.getElementById("bg");
         
@@ -813,10 +996,9 @@ if (!haveEvents) {
         }
         audio.sfx.mirrorMove.isRoundRobin = true;
         audio.sfx.mirrorReflect.data = new Audio("./audio/reflect.m4a");
-
-        console.log("INIT")
     }
     canvas1.startFrame = function(t, dt) {
+        GameState.time = t;
         if (!window.initResourcesReady) {
             scangamepads();
             return;
@@ -843,6 +1025,7 @@ if (!haveEvents) {
 
         if (currentState == GameState.pre && ((this.cursor.z == 1) || justPressedByKey("start"))) {
             currentState = GameState.running;
+            ScorePoint.prevCollectTime = GameState.time;
         }
 
         if (currentState != GameState.running) {
@@ -857,6 +1040,32 @@ if (!haveEvents) {
             //return;
         }
     };
+
+    const THING_TYPE = {
+        SCORE_POINT : 0,
+    };
+    class Thing {
+        constructor(x, y) {
+            this.coords   = [x, y];
+            this.isActive = false;
+            this.data     = null;
+        }        
+    }
+    class ScorePoint {
+        constructor(base) {
+            this.base      = base;
+            this.value     = 10;
+            this.thingType = THING_TYPE.SCORE_POINT;
+        }
+    }
+
+    function handleLoss() {
+        vibrateController();
+        respawnDelay = respawnDelayMax;
+        Score.count      = Math.floor(Score.count * .5);
+        Score.multiplier = Laser.defaultSpeed / 60;
+        laser.distPer = Score.multiplier * 60;
+    }
 
     function vibrateController() {
         return;
@@ -902,36 +1111,35 @@ if (!haveEvents) {
         // check collision with mirrors 
         //(very simple collision possible
         // since the laser is guaranteed to hit at a certain pixel)
-        let collisionOccurred = false;
+        let mirrorCollisionOccurred = false;
         let mirr = null;
-        for (let i = 0; i < mirrors.length && !collisionOccurred; ++i) {
-            for (let j = 0; j < mirrors[i].length && !collisionOccurred; ++j) {
+        for (let i = 0; i < mirrors.length && !mirrorCollisionOccurred; ++i) {
+            for (let j = 0; j < mirrors[i].length && !mirrorCollisionOccurred; ++j) {
                 mirr = mirrors[i][j];
                 
                 if ((
-                        (laser.x - mirr.x) * (laser.x - mirr.x) + 
-                        (laser.y - mirr.y) * (laser.y - mirr.y)
-                    ) < 20) {
+                    (laser.x - mirr.x) * (laser.x - mirr.x) + 
+                    (laser.y - mirr.y) * (laser.y - mirr.y)) < 20) 
+                {
                     laser.x = mirr.x;
                     laser.y = mirr.y;
-                    collisionOccurred = true;
+                    mirrorCollisionOccurred = true;
                 }                
             }
         }
-        frameData.collisionOccurred = collisionOccurred;
+        frameData.mirrorCollisionOccurred = mirrorCollisionOccurred;
                         
         Mirror.orient = curControl;
         
         let nextLaserOrient = laser.orient;      
-        if (collisionOccurred) {
+        if (mirrorCollisionOccurred) {
             const orient = handleLaserAndMirrorCollision(laser);
             if (LaserLive) {
                 laser.orient          = orient;
                 laser.tailPosition[0] = laser.x;
                 laser.tailPosition[1] = laser.y;
             }  else {
-                vibrateController();
-                respawnDelay = respawnDelayMax;
+                handleLoss();
             }
         }
         
@@ -951,13 +1159,19 @@ if (!haveEvents) {
             return;
         }
         // out-of-bounds check
-        if (!collisionOccurred
-            && laser.x < -laser.width || laser.x > worldDimensions[0] + laser.width
-            || laser.y < -laser.height || laser.y > worldDimensions[1] + laser.height) {
-            // respawn at game starting point
-            canvas1.resetLaserPosition(laser);
-            vibrateController();
-            respawnDelay = respawnDelayMax;
+        if (!mirrorCollisionOccurred) { 
+            if ( 
+                laser.x < -laser.width || 
+                laser.x > worldDimensions[0] + laser.width || 
+                laser.y < -laser.height || 
+                laser.y > worldDimensions[1] + laser.height
+            ) {
+                // respawn at game starting point
+                canvas1.resetLaserPosition(laser);
+                handleLoss();
+            } else {
+                handleMapCollision();
+            }
         }
        
     }
@@ -966,14 +1180,17 @@ if (!haveEvents) {
         g.save();
 
         //g.translate(-currScale[0] / 2, -currScale[1] / 2)
-        g.scale(currScale[0] / worldDimensions[0], currScale[1] / worldDimensions[1]);
+        g.scale(
+            currScale[0] / worldDimensions[0],
+            currScale[1] / worldDimensions[1]
+        );
         //g.translate(currScale[0] / 2, currScale[1] / 2)
     }
     function renderTransformEnd(g) {
     	g.restore();
     }
 
-    canvas1.render = function(dt, g) {
+    canvas1.render = function(t, dt, g) {
 
     	currScale[0] = canvas1.width;
     	currScale[1] = canvas1.height;
@@ -1011,19 +1228,35 @@ if (!haveEvents) {
             let titleSizeOffset = g.measureText(title).width / 2;
             g.fillText(title,
                        worldDimensions[0] / 2  - titleSizeOffset,
-                       worldDimensions[1] / 4);
+                       worldDimensions[1] / 4
+            );
             
             g.font = "25px Calibri";       
             let msg = "Click to Start, Instructions Below";
             let msgSizeOffset = g.measureText(msg).width / 2;
             g.fillText(msg, 
                        worldDimensions[0] / 2  - msgSizeOffset,
-                       worldDimensions[1] / 3);
+                       worldDimensions[1] / 3
+            );
+
             renderTransformEnd(g);
             return;
+        } else {
+            g.fillStyle = (respawnDelay > 0) ? "red" : "blue";
+            g.font = "30px Calibri";
+            let msg = "Score: " + Score.count + ", Reward: x " + Math.max(2 / (1 + (GameState.time - ScorePoint.prevCollectTime))).toFixed(2) + ", Speed: " + laser.distPer;
+
+            // let msgSizeOffset = g.measureText(msg).width / 2;
+            g.fillText(msg,
+               20,
+                worldDimensions[1] - 20
+            );
         }
+
+        renderThings(g, t, dt);
                 
-        drawLaser(g, laser, dt);
+        drawLaser(g, laser, t, dt);
+
 
         renderTransformEnd(g);
 	}
