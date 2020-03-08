@@ -775,7 +775,9 @@ if (!haveEvents) {
     
     const Score = {
         multiplier : Laser.defaultSpeed / 60,
-        count : 0 
+        count     : 0 ,
+        streak    : 0,
+        maxStreak : 0
     }
 
     function handleMapCollision() {
@@ -858,7 +860,8 @@ if (!haveEvents) {
         Score.count += sp.value * Math.max(0, (2 / (1 + (GameState.time - ScorePoint.prevCollectTime))));
         console.log(Score.multiplier);
         Score.multiplier = Math.min(12, Score.multiplier + 1);
-        console.log(Score.multiplier);
+        Score.streak += 1;
+        Score.maxStreak = Math.max(Score.maxStreak, Score.streak);
         laser.distPer = Score.multiplier * 60;
         activeScorePoints -= 1;
 
@@ -1064,6 +1067,7 @@ if (!haveEvents) {
         respawnDelay = respawnDelayMax;
         Score.count      = Math.floor(Score.count * .5);
         Score.multiplier = Laser.defaultSpeed / 60;
+        Score.streak     = 0;
         laser.distPer = Score.multiplier * 60;
     }
 
@@ -1244,7 +1248,12 @@ if (!haveEvents) {
         } else {
             g.fillStyle = (respawnDelay > 0) ? "red" : "blue";
             g.font = "30px Calibri";
-            let msg = "Score: " + Score.count + ", Reward: x " + Math.max(2 / (1 + (GameState.time - ScorePoint.prevCollectTime))).toFixed(2) + ", Speed: " + laser.distPer;
+            let msg = "Score: " + Score.count + 
+                      ", Reward: x " + Math.max(2 / (1 + (GameState.time - ScorePoint.prevCollectTime))).toFixed(2) + 
+                      ", Speed: " + laser.distPer + 
+                      ", Streak: " + Score.streak + 
+                      ", Max Streak: " + Score.maxStreak;
+
 
             // let msgSizeOffset = g.measureText(msg).width / 2;
             g.fillText(msg,
