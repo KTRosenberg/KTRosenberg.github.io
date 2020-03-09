@@ -137,7 +137,8 @@
         Orientation.upLeft,
         Orientation.left,
         Orientation.downLeft,
-        Orientation.down
+        Orientation.down,
+        Orientation.downRight
     ];
     function handleAnalogueStick() {
         const axes = Input.axes;
@@ -157,7 +158,7 @@
         }
         angle /= (TAU / 8);
 
-        const idx =  Math.min(TAU, Math.max(0, Math.floor(angle)));
+        const idx =  Math.max(0, Math.floor(angle));
         curControl = analogueToDirection[idx];
     }
 
@@ -584,7 +585,7 @@ if (!haveEvents) {
             ];
         }
     }
-    Laser.defaultSpeed = 9 * 60;
+    Laser.defaultSpeed = 5 * 60;
     
     canvas1.resetLaserPosition = function(laser, dt) {
         laser.x = worldDimensions[0] / 2;
@@ -593,6 +594,8 @@ if (!haveEvents) {
 
         laser.tailPosition[0] = worldDimensions[0] / 2;
         laser.tailPosition[1] = worldDimensions[1]; 
+
+        latestMirror = null;
     }
 
     
@@ -947,7 +950,7 @@ if (!haveEvents) {
     canvas1.init = function() {
         laser = new Laser(
             worldDimensions[0] / 2, worldDimensions[1], 
-            20, 100, 9 * 60
+            20, 100, Laser.defaultSpeed
         );
 
         currentState = GameState.pre;
@@ -1069,6 +1072,7 @@ if (!haveEvents) {
         Score.multiplier = Laser.defaultSpeed / 60;
         Score.streak     = 0;
         laser.distPer = Score.multiplier * 60;
+        latestMirror = null;
     }
 
     function vibrateController() {
@@ -1087,6 +1091,7 @@ if (!haveEvents) {
     }, 
     false);
 
+    let latestMirror = null;
     canvas1.update = function(t, dt, g) {
         if (!window.initResourcesReady || 
             currentState != GameState.running || 
@@ -1120,6 +1125,9 @@ if (!haveEvents) {
         for (let i = 0; i < mirrors.length && !mirrorCollisionOccurred; ++i) {
             for (let j = 0; j < mirrors[i].length && !mirrorCollisionOccurred; ++j) {
                 mirr = mirrors[i][j];
+                if (mirr == latestMirror) {
+                    continue;
+                }
                 
                 if ((
                     (laser.x - mirr.x) * (laser.x - mirr.x) + 
@@ -1128,6 +1136,7 @@ if (!haveEvents) {
                     laser.x = mirr.x;
                     laser.y = mirr.y;
                     mirrorCollisionOccurred = true;
+                    latestMirror = mirr;
                 }                
             }
         }
