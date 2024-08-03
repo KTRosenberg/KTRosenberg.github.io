@@ -104,6 +104,18 @@
     <h2>Full Demo Reel:</h2>
     <iframe width="480" height="270" src="https://www.youtube.com/embed/2i1ZeNQdjBQ?si=CE9fuK87AZPgTYKy" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
     </div>
+    <script type="text/javascript">
+        const videos = document.querySelectorAll('video');
+        for (const video of videos) {
+          video.addEventListener('play', (el) => {
+            for (const video of videos) {
+              if (video !== el) {
+                video.pause();
+              }
+            }
+          });
+        }
+    </script>
     </div>
   </body>
 </html>
