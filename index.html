@@ -156,7 +156,7 @@ li {
     <h4>Short Preview:</h4><p><div class="container"><iframe max-width="960" src="https://www.youtube.com/embed/Kgt48theqi0?si=5xgqBj-dhVgAcLIt" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div></p>
     </div>
 
-    <h3 id="music-toggle" class="header-button">>Show Music</h3>
+    <h3 id="music-toggle" class="header-button">> Show Music</h3>
     <div id="music-section" style="display: none;">
     <iframe width="100%" height="168" scrolling="no" frameborder="no" allow="autoplay" src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/soundcloud%253Atracks%253A274175667&color=%23d6b8bc&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true"></iframe><div style="font-size: 10px; color: #cccccc;line-break: anywhere;word-break: normal;overflow: hidden;white-space: nowrap;text-overflow: ellipsis; font-family: Interstate,Lucida Grande,Lucida Sans Unicode,Lucida Sans,Garuda,Verdana,Tahoma,sans-serif;font-weight: 100;"><a href="https://soundcloud.com/synchronizerman" title="KTR synchronizer" target="_blank" style="color: #cccccc; text-decoration: none;">KTR synchronizer</a> · <a href="https://soundcloud.com/synchronizerman/tear-ver-5-6" title="Tear ver_5_6_50" target="_blank" style="color: #cccccc; text-decoration: none;">Tear ver_5_6_50</a></div>
     <iframe width="100%" height="168" scrolling="no" frameborder="no" allow="autoplay" src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/soundcloud%253Atracks%253A182608645&color=%23d6b8bc&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true"></iframe><div style="font-size: 10px; color: #cccccc;line-break: anywhere;word-break: normal;overflow: hidden;white-space: nowrap;text-overflow: ellipsis; font-family: Interstate,Lucida Grande,Lucida Sans Unicode,Lucida Sans,Garuda,Verdana,Tahoma,sans-serif;font-weight: 100;"><a href="https://soundcloud.com/synchronizerman" title="KTR synchronizer" target="_blank" style="color: #cccccc; text-decoration: none;">KTR synchronizer</a> · <a href="https://soundcloud.com/synchronizerman/floating-point-ver-3_6_2" title="Floating Point Ver 3_6_2" target="_blank" style="color: #cccccc; text-decoration: none;">Floating Point Ver 3_6_2</a></div>
@@ -167,11 +167,11 @@ li {
     MUSIC_EL.onclick = () => {
         const SECTION = document.getElementById("music-section");
         if (SECTION.style.display === "none") {
-            MUSIC_EL.textContent = ">Hide Music";
+            MUSIC_EL.textContent = "< Hide Music";
             SECTION.style.display = "block";
             SECTION.scrollIntoView({ behavior: "smooth", block: "start" });
         } else {
-            MUSIC_EL.textContent = ">Show Music";
+            MUSIC_EL.textContent = "> Show Music";
             SECTION.style.display = "none";
         }
     };
