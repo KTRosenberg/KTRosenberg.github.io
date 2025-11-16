@@ -156,7 +156,11 @@ li {
     <script type="module">
     document.getElementById("music-toggle").onclick = () => {
         const SECTION = document.getElementById("music-section");
-        SECTION.style.display = (SECTION.style.display === "none") ? "block" : "none";
+        if (SECTION.style.display === "none") {
+          SECTION.scrollIntoView({ behavior: "smooth", block: "start" });
+        } else {
+          SECTION.style.display = "none";
+        }
     };
     </script>
   </body>
